@@ -31,11 +31,11 @@ impl Default for Worker {
 }
 
 impl Worker {
-    pub fn start(&mut self) {
+    pub fn start(&mut self, input: String) {
         assert!(self.thread.is_none());
 
         let token = CancellationToken::new();
-        let join = self.rt.spawn(Self::run(self.search.clone(), token.clone()));
+        let join = self.rt.spawn(Self::run(self.search.clone(), token.clone(), input));
 
         self.thread = Some((token, join));
     }
@@ -51,9 +51,10 @@ impl Worker {
         };
     }
 
-    async fn run(search: SharedSearch, token: CancellationToken) {
+    async fn run(search: SharedSearch, token: CancellationToken, input: String) {
         let client = Client::new(String::from("https://vid.puffyan.us"));
-        let fetch = client.search(Some("q=rust programming"));
+        let input = format!("q={input}");
+        let fetch = client.search(Some(&input));
 
         let result = select! {
             s = fetch => s,

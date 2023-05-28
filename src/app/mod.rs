@@ -68,7 +68,7 @@ impl App {
             }
             KeyCode::Enter => {
                 self.state = State::None;
-                self.worker.start();
+                self.worker.start(self.input.clone());
             }
             _ => {}
         }
