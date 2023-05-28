@@ -12,6 +12,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
@@ -122,7 +123,15 @@ impl App {
             .search
             .items
             .iter()
-            .map(|v| ListItem::new("Test").style(Style::default()))
+            .map(|v| {
+                ListItem::new(match v {
+                    Video { title, .. } => title.as_str(),
+                    Playlist { title, .. } => title.as_str(),
+                    Channel { name, .. } => name.as_str(),
+                    Unknown(_) => "Error",
+                })
+                .style(Style::default())
+            })
             .collect();
 
         let videos_list = List::new(items)
