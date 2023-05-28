@@ -1,3 +1,7 @@
+mod videos;
+
+use videos::VideosList;
+
 use std::{error::Error, io};
 
 use crossterm::{
@@ -22,53 +26,6 @@ enum State {
     Search,
     List,
     Exit,
-}
-
-#[derive(Default)]
-struct VideosList<T> {
-    state: ListState,
-    items: Vec<T>,
-}
-
-impl<T> VideosList<T> {
-    fn with_items(items: Vec<T>) -> VideosList<T> {
-        VideosList {
-            state: ListState::default(),
-            items,
-        }
-    }
-
-    fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    fn unselect(&mut self) {
-        self.state.select(None);
-    }
 }
 
 #[derive(Default)]
