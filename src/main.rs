@@ -4,19 +4,18 @@ mod args;
 use app::App;
 use args::Args;
 
+use std::io;
+
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{ DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, Widget},
     Terminal,
 };
-use std::{io, thread, time::Duration};
 
 fn main() -> Result<(), io::Error> {
     let args = Args::parse();

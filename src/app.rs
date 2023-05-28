@@ -10,7 +10,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Text},
-    widgets::{canvas::Line, Block, Borders, List, ListItem, Paragraph},
+    widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
@@ -24,9 +24,57 @@ enum State {
 }
 
 #[derive(Default)]
+struct VideosList<T> {
+    state: ListState,
+    items: Vec<T>,
+}
+
+impl<T> VideosList<T> {
+    fn with_items(items: Vec<T>) -> VideosList<T> {
+        VideosList {
+            state: ListState::default(),
+            items,
+        }
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn unselect(&mut self) {
+        self.state.select(None);
+    }
+}
+
+#[derive(Default)]
 pub struct App {
     state: State,
     input: String,
+    items: VideosList<String>,
 }
 
 impl App {
@@ -77,7 +125,7 @@ impl App {
         }
     }
 
-    fn ui<B: Backend>(&self, f: &mut Frame<B>) {
+    fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
@@ -95,5 +143,23 @@ impl App {
         if self.state == State::Search {
             f.set_cursor(chunks[0].x + self.input.width() as u16 + 1, chunks[0].y + 1)
         }
+
+        let items: Vec<ListItem> = self
+            .items
+            .items
+            .iter()
+            .map(|v| ListItem::new(v.as_str()).style(Style::default().fg(Color::Black).bg(Color::White)))
+            .collect();
+
+        // Create a List from all list items and highlight the currently selected one
+        let items = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title("Videos"))
+            .highlight_style(
+                Style::default()
+                    .bg(Color::LightGreen)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .highlight_symbol(">> ");
+        f.render_stateful_widget(items, chunks[1], &mut self.items.state);
     }
 }
