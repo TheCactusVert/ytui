@@ -11,4 +11,5 @@ crossterm = "0.26.1"
 invidious = { version = "0.4.1", features = ["reqwest"] }
 ratatui = "0.20.1"
 tokio = "1.28.2"
+tokio-util = "0.7.8"
 unicode-width = "0.1.10"
