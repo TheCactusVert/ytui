@@ -17,7 +17,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Text},
-    widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph, Clear},
+    widgets::{canvas::Line, Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
@@ -108,12 +108,10 @@ impl App {
     }
 
     fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
-        let size = f.size();
-        
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-            .split(size);
+            .split(f.size());
 
         let mut search = self.worker.get_search();
 
@@ -143,16 +141,18 @@ impl App {
         f.render_stateful_widget(videos_list, chunks[0], &mut self.list.state);
 
         if self.state == State::Search {
-            let search_paragraph = Paragraph::new(self.input.as_str())
-                .block(Block::default().borders(Borders::ALL).title("Search"))
-                .style(
-                    Style::default().fg(Color::Yellow)
-                );
-            let area = Self::centered_rect(60, 20, size);
-            f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(search_paragraph, area);
-            f.set_cursor(area.x + self.input.width() as u16 + 1, area.y + 1);
+            self.ui_search(f);
         }
+    }
+
+    fn ui_search<B: Backend>(&mut self, f: &mut Frame<B>) {
+        let search_paragraph = Paragraph::new(self.input.as_str())
+            .block(Block::default().borders(Borders::ALL).title("Search"))
+            .style(Style::default().fg(Color::Yellow));
+        let area = Self::centered_rect(60, 20, f.size());
+        f.render_widget(Clear, area); //this clears out the background
+        f.render_widget(search_paragraph, area);
+        f.set_cursor(area.x + self.input.width() as u16 + 1, area.y + 1);
     }
 
     /// helper function to create a centered rect using up certain percentage of the available rect `r`
