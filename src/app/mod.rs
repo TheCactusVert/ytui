@@ -103,14 +103,14 @@ impl App {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(f.size());
 
-        let input = Paragraph::new(self.input.as_str())
+        let search_paragraph = Paragraph::new(self.input.as_str())
             .block(Block::default().borders(Borders::ALL).title("Search"))
             .style(if self.state == State::Search {
                 Style::default().fg(Color::Yellow)
             } else {
                 Style::default()
             });
-        f.render_widget(input, chunks[0]);
+        f.render_widget(search_paragraph, chunks[0]);
 
         if self.state == State::Search {
             f.set_cursor(chunks[0].x + self.input.width() as u16 + 1, chunks[0].y + 1)
@@ -123,7 +123,7 @@ impl App {
             .map(|v| ListItem::new(v.as_str()).style(Style::default().fg(Color::Black).bg(Color::White)))
             .collect();
 
-        let items = List::new(items)
+        let videos_list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Videos"))
             .style(if self.state == State::List {
                 Style::default().fg(Color::Yellow)
@@ -136,6 +136,6 @@ impl App {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol(">> ");
-        f.render_stateful_widget(items, chunks[1], &mut self.items.state);
+        f.render_stateful_widget(videos_list, chunks[1], &mut self.items.state);
     }
 }

@@ -10,4 +10,5 @@ clap = { version = "4.3.0", features = ["derive", "cargo"] }
 crossterm = "0.26.1"
 invidious = { version = "0.4.1", features = ["reqwest"] }
 ratatui = "0.20.1"
+tokio = "1.28.2"
 unicode-width = "0.1.10"
