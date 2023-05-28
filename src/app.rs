@@ -1,3 +1,5 @@
+use std::{error::Error, io};
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
@@ -11,7 +13,6 @@ use ratatui::{
     widgets::{canvas::Line, Block, Borders, List, ListItem, Paragraph},
     Frame, Terminal,
 };
-use std::{error::Error, io};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Default)]
@@ -37,6 +38,10 @@ impl App {
                             }
                             KeyCode::Esc => {
                                 self.searching = false;
+                            }
+                            KeyCode::Enter => {
+                                self.searching = false;
+                                // Search
                             }
                             _ => {}
                         }
