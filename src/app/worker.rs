@@ -1,5 +1,3 @@
-use crate::app::VideosList;
-
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 
@@ -12,7 +10,7 @@ use tokio::task::JoinHandle;
 use tokio_util::either::Either;
 use tokio_util::sync::CancellationToken;
 
-type SharedSearch = Arc<Mutex<VideosList>>;
+type SharedSearch = Arc<Mutex<Search>>;
 
 pub struct Worker {
     search: SharedSearch,
@@ -23,7 +21,7 @@ pub struct Worker {
 impl Default for Worker {
     fn default() -> Self {
         Self {
-            search: SharedSearch::default(),
+            search: Arc::new(Mutex::new( Search { items: Vec::default() })),
             rt: Runtime::new().unwrap(),
             thread: None,
         }
@@ -46,7 +44,7 @@ impl Worker {
             self.rt.block_on(&mut thread.1).unwrap();
         }
 
-        *self.search.lock().unwrap() = VideosList::default();
+        *self.search.lock().unwrap() = Search { items: Vec::default() };
     }
 
     async fn run(search: SharedSearch, token: CancellationToken) {
@@ -57,15 +55,15 @@ impl Worker {
             s = fetch => s,
             _ = token.cancelled() => return,
         };
-
+        
         // Lock only when data is received
         *search.lock().unwrap() = match result {
-            Ok(s) => VideosList::with_items(s),
-            Err(_) => VideosList::default(),
-        }
+            Ok(s) => s,
+            Err(_) => Search { items: Vec::default() },
+        };
     }
 
-    pub fn get_search(&self) -> VideosList {
+    pub fn get_search(&self) -> Search {
         (*self.search
             .lock()
             .unwrap())

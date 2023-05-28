@@ -1,17 +1,10 @@
-use std::{error::Error, io};
-
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Span, Text},
     widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
 use invidious::structs::universal::Search;

@@ -35,6 +35,7 @@ pub struct App {
     state: State,
     input: String,
     worker: Worker,
+    list: VideosList,
 }
 
 impl App {
@@ -124,7 +125,9 @@ impl App {
             .worker
             .get_search();
 
-        let items: Vec<ListItem> = search.search.items
+        self.list = VideosList::with_items(search);
+
+        let items: Vec<ListItem> = self.list.search.items
             .iter()
             .map(|v| {
                 ListItem::new("Test").style(Style::default().fg(Color::Black).bg(Color::White))
@@ -144,6 +147,6 @@ impl App {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol(">> ");
-        f.render_stateful_widget(videos_list, chunks[1], &mut search.state);
+        f.render_stateful_widget(videos_list, chunks[1], &mut self.list.state);
     }
 }
