@@ -30,7 +30,7 @@ impl VideosList {
         }
     }
 
-    fn next(&mut self) {
+    pub fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.search.items.len() - 1 {
@@ -44,7 +44,7 @@ impl VideosList {
         self.state.select(Some(i));
     }
 
-    fn previous(&mut self) {
+    pub fn previous(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -58,7 +58,7 @@ impl VideosList {
         self.state.select(Some(i));
     }
 
-    fn unselect(&mut self) {
+    pub fn unselect(&mut self) {
         self.state.select(None);
     }
 }
