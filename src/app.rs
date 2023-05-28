@@ -15,46 +15,62 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
+#[derive(PartialEq, Default)]
+enum State {
+    #[default]
+    None,
+    Search,
+    Exit,
+}
+
 #[derive(Default)]
 pub struct App {
-    searching: bool,
+    state: State,
     input: String,
 }
 
 impl App {
+    fn handle_event(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                self.state = State::Exit;
+            }
+            KeyCode::Char('/') => {
+                self.state = State::Search;
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_event_search(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char(c) => {
+                self.input.push(c);
+            }
+            KeyCode::Backspace => {
+                self.input.pop();
+            }
+            KeyCode::Esc => {
+                self.state = State::None;
+            }
+            KeyCode::Enter => {
+                self.state = State::None;
+                // Search
+            }
+            _ => {}
+        }
+    }
+
     pub fn exec<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         loop {
             terminal.draw(|f| self.ui(f))?;
 
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    if self.searching {
-                        match key.code {
-                            KeyCode::Char(c) if self.searching => {
-                                self.input.push(c);
-                            }
-                            KeyCode::Backspace if self.searching => {
-                                self.input.pop();
-                            }
-                            KeyCode::Esc => {
-                                self.searching = false;
-                            }
-                            KeyCode::Enter => {
-                                self.searching = false;
-                                // Search
-                            }
-                            _ => {}
-                        }
-                    } else {
-                        match key.code {
-                            KeyCode::Char('q') | KeyCode::Esc => {
-                                return Ok(());
-                            }
-                            KeyCode::Char('/') => {
-                                self.searching = true;
-                            }
-                            _ => {}
-                        }
+                    match self.state {
+                        State::None => self.handle_event(key.code),
+                        State::Search => self.handle_event_search(key.code),
+                        State::Exit => return Ok(()),
                     }
                 }
             }
@@ -68,7 +84,7 @@ impl App {
             .split(f.size());
 
         let input = Paragraph::new(self.input.as_str())
-            .style(if self.searching {
+            .style(if self.state == State::Search {
                 Style::default().fg(Color::Yellow)
             } else {
                 Style::default()
@@ -76,7 +92,7 @@ impl App {
             .block(Block::default().borders(Borders::ALL).title("Search"));
         f.render_widget(input, chunks[0]);
 
-        if self.searching {
+        if self.state == State::Search {
             f.set_cursor(chunks[0].x + self.input.width() as u16 + 1, chunks[0].y + 1)
         }
     }
