@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 clap = {version = "4.3.0", features = ["derive", "cargo"] }
+crossterm = "0.26.1"
+ratatui = "0.20.1"
+unicode-width = "0.1.10"
