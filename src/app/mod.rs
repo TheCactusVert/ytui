@@ -4,8 +4,8 @@ mod worker;
 use videos::VideosList;
 use worker::Worker;
 
-use std::{error::Error, io};
 use std::time::Duration;
+use std::{error::Error, io};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
@@ -14,10 +14,10 @@ use crossterm::{
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Text},
-    widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph, Clear},
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
@@ -97,7 +97,7 @@ impl App {
                             State::None => self.handle_event(key.code),
                             State::Search => self.handle_event_search(key.code),
                             State::List => self.handle_event_list(key.code),
-                            _ => {},
+                            _ => {}
                         }
                     }
                 }
@@ -108,23 +108,12 @@ impl App {
     }
 
     fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
+        let size = f.size();
+        
         let chunks = Layout::default()
-            .direction(Direction::Vertical)
+            .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-            .split(f.size());
-
-        let search_paragraph = Paragraph::new(self.input.as_str())
-            .block(Block::default().borders(Borders::ALL).title("Search"))
-            .style(if self.state == State::Search {
-                Style::default().fg(Color::Yellow)
-            } else {
-                Style::default()
-            });
-        f.render_widget(search_paragraph, chunks[0]);
-
-        if self.state == State::Search {
-            f.set_cursor(chunks[0].x + self.input.width() as u16 + 1, chunks[0].y + 1)
-        }
+            .split(size);
 
         let mut search = self.worker.get_search();
 
@@ -135,9 +124,7 @@ impl App {
             .search
             .items
             .iter()
-            .map(|v| {
-                ListItem::new("Test").style(Style::default())
-            })
+            .map(|v| ListItem::new("Test").style(Style::default()))
             .collect();
 
         let videos_list = List::new(items)
@@ -153,6 +140,45 @@ impl App {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol(">> ");
-        f.render_stateful_widget(videos_list, chunks[1], &mut self.list.state);
+        f.render_stateful_widget(videos_list, chunks[0], &mut self.list.state);
+
+        if self.state == State::Search {
+            let search_paragraph = Paragraph::new(self.input.as_str())
+                .block(Block::default().borders(Borders::ALL).title("Search"))
+                .style(
+                    Style::default().fg(Color::Yellow)
+                );
+            let area = Self::centered_rect(60, 20, size);
+            f.render_widget(Clear, area); //this clears out the background
+            f.render_widget(search_paragraph, area);
+            f.set_cursor(area.x + self.input.width() as u16 + 1, area.y + 1);
+        }
+    }
+
+    /// helper function to create a centered rect using up certain percentage of the available rect `r`
+    fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+        let popup_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Percentage((100 - percent_y) / 2),
+                    Constraint::Percentage(percent_y),
+                    Constraint::Percentage((100 - percent_y) / 2),
+                ]
+                .as_ref(),
+            )
+            .split(r);
+
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Percentage((100 - percent_x) / 2),
+                    Constraint::Percentage(percent_x),
+                    Constraint::Percentage((100 - percent_x) / 2),
+                ]
+                .as_ref(),
+            )
+            .split(popup_layout[1])[1]
     }
 }
