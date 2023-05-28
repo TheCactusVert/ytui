@@ -48,7 +48,6 @@ impl App {
             }
             KeyCode::Char('/') => {
                 self.state = State::Search;
-                self.worker.stop();
             }
             KeyCode::Enter => {
                 // Open video
@@ -76,6 +75,7 @@ impl App {
             }
             KeyCode::Enter => {
                 self.state = State::List;
+                self.worker.stop();
                 self.worker.start(self.input.clone());
             }
             _ => {}
