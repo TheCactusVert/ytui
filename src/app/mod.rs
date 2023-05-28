@@ -20,6 +20,7 @@ enum State {
     #[default]
     None,
     Search,
+    List,
     Exit,
 }
 
@@ -109,6 +110,19 @@ impl App {
         }
     }
 
+    fn handle_event_list(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Esc => {
+                self.state = State::None;
+            }
+            KeyCode::Enter => {
+                self.state = State::None;
+                // Open video
+            }
+            _ => {}
+        }
+    }
+
     pub fn exec<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         loop {
             terminal.draw(|f| self.ui(f))?;
@@ -118,6 +132,7 @@ impl App {
                     match self.state {
                         State::None => self.handle_event(key.code),
                         State::Search => self.handle_event_search(key.code),
+                        State::List => self.handle_event_list(key.code),
                         State::Exit => return Ok(()),
                     }
                 }
@@ -132,12 +147,12 @@ impl App {
             .split(f.size());
 
         let input = Paragraph::new(self.input.as_str())
+            .block(Block::default().borders(Borders::ALL).title("Search"))
             .style(if self.state == State::Search {
                 Style::default().fg(Color::Yellow)
             } else {
                 Style::default()
-            })
-            .block(Block::default().borders(Borders::ALL).title("Search"));
+            });
         f.render_widget(input, chunks[0]);
 
         if self.state == State::Search {
@@ -151,9 +166,13 @@ impl App {
             .map(|v| ListItem::new(v.as_str()).style(Style::default().fg(Color::Black).bg(Color::White)))
             .collect();
 
-        // Create a List from all list items and highlight the currently selected one
         let items = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Videos"))
+            .style(if self.state == State::List {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            })
             .highlight_style(
                 Style::default()
                     .bg(Color::LightGreen)
