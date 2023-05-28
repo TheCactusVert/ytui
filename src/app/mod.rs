@@ -26,9 +26,8 @@ use unicode_width::UnicodeWidthStr;
 #[derive(PartialEq, Default, Debug)]
 enum State {
     #[default]
-    None,
-    Search,
     List,
+    Search,
     Exit,
 }
 
@@ -41,7 +40,7 @@ pub struct App {
 }
 
 impl App {
-    fn handle_event(&mut self, code: KeyCode) {
+    fn handle_event_list(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 self.state = State::Exit;
@@ -50,6 +49,13 @@ impl App {
             KeyCode::Char('/') => {
                 self.state = State::Search;
                 self.worker.stop();
+            }
+            KeyCode::Esc => {
+                self.state = State::List;
+            }
+            KeyCode::Enter => {
+                self.state = State::List;
+                // Open video
             }
             _ => {}
         }
@@ -64,24 +70,11 @@ impl App {
                 self.input.pop();
             }
             KeyCode::Esc => {
-                self.state = State::None;
+                self.state = State::List;
             }
             KeyCode::Enter => {
-                self.state = State::None;
+                self.state = State::List;
                 self.worker.start(self.input.clone());
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_event_list(&mut self, code: KeyCode) {
-        match code {
-            KeyCode::Esc => {
-                self.state = State::None;
-            }
-            KeyCode::Enter => {
-                self.state = State::None;
-                // Open video
             }
             _ => {}
         }
@@ -95,9 +88,8 @@ impl App {
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
                         match self.state {
-                            State::None => self.handle_event(key.code),
-                            State::Search => self.handle_event_search(key.code),
                             State::List => self.handle_event_list(key.code),
+                            State::Search => self.handle_event_search(key.code),
                             _ => {}
                         }
                     }

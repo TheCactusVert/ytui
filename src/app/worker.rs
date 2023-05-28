@@ -35,7 +35,9 @@ impl Worker {
         assert!(self.thread.is_none());
 
         let token = CancellationToken::new();
-        let join = self.rt.spawn(Self::run(self.search.clone(), token.clone(), input));
+        let join = self
+            .rt
+            .spawn(Self::run(self.search.clone(), token.clone(), input));
 
         self.thread = Some((token, join));
     }
