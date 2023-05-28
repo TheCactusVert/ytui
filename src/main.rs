@@ -8,14 +8,11 @@ use std::io;
 
 use clap::Parser;
 use crossterm::{
-    event::{ DisableMouseCapture, EnableMouseCapture},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 
 fn main() -> Result<(), io::Error> {
     let args = Args::parse();

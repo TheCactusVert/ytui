@@ -14,34 +14,35 @@ use ratatui::{
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
+use invidious::structs::universal::Search;
 
-#[derive(PartialEq, Default)]
-enum State {
-    #[default]
-    None,
-    Search,
-    List,
-    Exit,
-}
-
-#[derive(Default)]
-pub struct VideosList<T> {
+#[derive(Clone)]
+pub struct VideosList {
     pub state: ListState,
-    pub items: Vec<T>,
+    pub search: Search,
 }
 
-impl<T> VideosList<T> {
-    fn with_items(items: Vec<T>) -> VideosList<T> {
+impl Default for VideosList {
+    fn default() -> VideosList {
         VideosList {
             state: ListState::default(),
-            items,
+            search: Search { items: Vec::new() },
+        }
+    }
+}
+
+impl VideosList {
+    pub fn with_items(search: Search) -> VideosList {
+        VideosList {
+            state: ListState::default(),
+            search,
         }
     }
 
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.len() - 1 {
+                if i >= self.search.items.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -56,7 +57,7 @@ impl<T> VideosList<T> {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.items.len() - 1
+                    self.search.items.len() - 1
                 } else {
                     i - 1
                 }

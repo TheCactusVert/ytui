@@ -1,6 +1,8 @@
 mod videos;
+mod worker;
 
 use videos::VideosList;
+use worker::Worker;
 
 use std::{error::Error, io};
 
@@ -32,7 +34,7 @@ enum State {
 pub struct App {
     state: State,
     input: String,
-    items: VideosList<String>,
+    worker: Worker,
 }
 
 impl App {
@@ -40,9 +42,11 @@ impl App {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 self.state = State::Exit;
+                self.worker.stop();
             }
             KeyCode::Char('/') => {
                 self.state = State::Search;
+                self.worker.stop();
             }
             _ => {}
         }
@@ -61,7 +65,7 @@ impl App {
             }
             KeyCode::Enter => {
                 self.state = State::None;
-                // Search
+                self.worker.start();
             }
             _ => {}
         }
@@ -116,11 +120,15 @@ impl App {
             f.set_cursor(chunks[0].x + self.input.width() as u16 + 1, chunks[0].y + 1)
         }
 
-        let items: Vec<ListItem> = self
-            .items
-            .items
+        let mut search = self
+            .worker
+            .get_search();
+
+        let items: Vec<ListItem> = search.search.items
             .iter()
-            .map(|v| ListItem::new(v.as_str()).style(Style::default().fg(Color::Black).bg(Color::White)))
+            .map(|v| {
+                ListItem::new("Test").style(Style::default().fg(Color::Black).bg(Color::White))
+            })
             .collect();
 
         let videos_list = List::new(items)
@@ -136,6 +144,6 @@ impl App {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol(">> ");
-        f.render_stateful_widget(videos_list, chunks[1], &mut self.items.state);
+        f.render_stateful_widget(videos_list, chunks[1], &mut search.state);
     }
 }
