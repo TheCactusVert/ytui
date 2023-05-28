@@ -5,6 +5,7 @@ use videos::VideosList;
 use worker::Worker;
 
 use std::{error::Error, io};
+use std::time::Duration;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
@@ -21,7 +22,7 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-#[derive(PartialEq, Default)]
+#[derive(PartialEq, Default, Debug)]
 enum State {
     #[default]
     None,
@@ -86,20 +87,24 @@ impl App {
     }
 
     pub fn exec<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
-        loop {
+        while self.state != State::Exit {
             terminal.draw(|f| self.ui(f))?;
 
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match self.state {
-                        State::None => self.handle_event(key.code),
-                        State::Search => self.handle_event_search(key.code),
-                        State::List => self.handle_event_list(key.code),
-                        State::Exit => return Ok(()),
+            if crossterm::event::poll(Duration::from_millis(250))? {
+                if let Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press {
+                        match self.state {
+                            State::None => self.handle_event(key.code),
+                            State::Search => self.handle_event_search(key.code),
+                            State::List => self.handle_event_list(key.code),
+                            _ => {},
+                        }
                     }
                 }
             }
         }
+
+        Ok(())
     }
 
     fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
@@ -121,16 +126,17 @@ impl App {
             f.set_cursor(chunks[0].x + self.input.width() as u16 + 1, chunks[0].y + 1)
         }
 
-        let mut search = self
-            .worker
-            .get_search();
+        let mut search = self.worker.get_search();
 
         self.list = VideosList::with_items(search);
 
-        let items: Vec<ListItem> = self.list.search.items
+        let items: Vec<ListItem> = self
+            .list
+            .search
+            .items
             .iter()
             .map(|v| {
-                ListItem::new("Test").style(Style::default().fg(Color::Black).bg(Color::White))
+                ListItem::new("Test").style(Style::default())
             })
             .collect();
 

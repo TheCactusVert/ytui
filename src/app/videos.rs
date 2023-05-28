@@ -3,11 +3,9 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph},
-};
-use unicode_width::UnicodeWidthStr;
 use invidious::structs::universal::Search;
+use ratatui::widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph};
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Clone)]
 pub struct VideosList {
