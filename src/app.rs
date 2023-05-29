@@ -1,11 +1,13 @@
 use crate::util;
+use crate::EventSender;
+use crate::Event;
 
 use std::io;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, KeyCode, KeyEventKind};
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
@@ -37,17 +39,19 @@ pub struct App {
     state: State,
     input: String,
     rt: Runtime,
+    event_tx: EventSender,
     search: SharedSearch,
     search_selection: ListState,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(event_tx: EventSender) -> Self {
         Self {
             state: State::default(),
             input: String::default(),
             rt: Runtime::new().unwrap(),
+            event_tx,
             search: Arc::new(Mutex::new(Search { items: Vec::new() })),
             search_selection: ListState::default(),
             searcher: None,
@@ -198,7 +202,7 @@ impl App {
         let token = CancellationToken::new();
         let join = self
             .rt
-            .spawn(Self::run_search(self.search.clone(), token.clone(), input));
+            .spawn(Self::run_search(self.event_tx.clone(), self.search.clone(), token.clone(), input));
 
         self.searcher = Some((token, join));
     }
@@ -214,7 +218,7 @@ impl App {
         self.search_selection.select(None);
     }
 
-    async fn run_search(search: SharedSearch, token: CancellationToken, input: String) {
+    async fn run_search(event_tx: EventSender, search: SharedSearch, token: CancellationToken, input: String) {
         let client = Client::new(String::from("https://vid.puffyan.us"));
         let input = format!("q={input}");
         let fetch = client.search(Some(&input));
@@ -227,5 +231,7 @@ impl App {
         if let Ok(s) = result {
             *search.lock().unwrap() = s;
         }
+
+        event_tx.send(Event::Fetch).unwrap();
     }
 }

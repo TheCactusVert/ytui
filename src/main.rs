@@ -13,11 +13,21 @@ use anyhow::Result;
 use anyhow::anyhow;
 use clap::Parser;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, Event},
+    event::{DisableMouseCapture, EnableMouseCapture, KeyEvent, MouseEvent},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+
+pub enum Event {
+    FocusGained,
+    FocusLost,
+    Key(KeyEvent),
+    Mouse(MouseEvent),
+    Paste(String),
+    Resize(u16, u16),
+    Fetch,
+}
 
 type EventSender = Sender<Event>;
 type EventReceiver = Receiver<Event>;
@@ -36,14 +46,23 @@ fn main() -> Result<()> {
     let (tx, rx): EventChannel = channel();
     let tx_clone = tx.clone();
     thread::spawn(move || loop {
-        let event = crossterm::event::read().unwrap();
+        let event = match crossterm::event::read() {
+            Ok(event) => match event {
+                crossterm::event::Event::FocusGained => Event::FocusGained,
+                crossterm::event::Event::FocusLost => Event::FocusLost,
+                crossterm::event::Event::Key(k) => Event::Key(k),
+                crossterm::event::Event::Mouse(m) => Event::Mouse(m),
+                crossterm::event::Event::Paste(p) => Event::Paste(p),
+                crossterm::event::Event::Resize(w, h) => Event::Resize(w, h),
+            }
+            Err(e) => continue,
+        };
+            
         tx_clone.send(event).unwrap();
     });
 
     // create app and run it
-    let mut app = App::new();
-
-    let mut ret = Ok(());
+    let mut app = App::new(tx.clone());
 
     while app.is_running() {
         terminal.draw(|f| app.ui(f));
@@ -63,5 +82,5 @@ fn main() -> Result<()> {
     )?;
     terminal.show_cursor()?;
 
-    ret
+    Ok(())
 }
