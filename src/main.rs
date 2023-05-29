@@ -47,7 +47,7 @@ fn main() -> Result<()> {
     });
 
     // create app and run it
-    let mut app = App::new(tx.clone());
+    let mut app = App::new(tx);
 
     while app.is_running() {
         // redraw the ui on event
