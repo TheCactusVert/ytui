@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     });
 
     // create app and run it
-    let mut app = App::default();
+    let mut app = App::new();
 
     let mut ret = Ok(());
 

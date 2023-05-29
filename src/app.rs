@@ -42,8 +42,8 @@ pub struct App {
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    pub fn new() -> Self {
         Self {
             state: State::default(),
             input: String::default(),
@@ -53,9 +53,7 @@ impl Default for App {
             searcher: None,
         }
     }
-}
-
-impl App {
+    
     fn next_video(&mut self) {
         let search = self.search.lock().unwrap();
 
