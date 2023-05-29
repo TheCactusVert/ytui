@@ -1,4 +1,5 @@
 use std::io;
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -18,6 +19,7 @@ use tokio::select;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
+use which::which;
 
 type SharedSearch = Arc<Mutex<Search>>;
 
@@ -99,9 +101,14 @@ impl App {
             KeyCode::Char('/') => {
                 self.state = State::Search;
             }
-            KeyCode::Enter => {
-                // Open video
-            }
+            KeyCode::Enter => match which("celluloid").or_else(|_| which("mpv")) {
+                Ok(p) => {
+                    Command::new(p)
+                        .spawn()
+                        .expect("mpv command failed to start");
+                }
+                Err(e) => {}
+            },
             KeyCode::Up => self.previous_video(),
             KeyCode::Down => self.next_video(),
             _ => {}
@@ -173,11 +180,6 @@ impl App {
             );
         }
 
-        let chunks_b = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
-            .split(chunks_a[1]);
-
         let search = self.search.lock().unwrap();
         let items: Vec<ListItem> = search
             .items
@@ -192,6 +194,11 @@ impl App {
                 .style(default_style)
             })
             .collect();
+
+        let chunks_b = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+            .split(chunks_a[1]);
 
         let videos_list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title(" Videos "))
