@@ -11,7 +11,7 @@ use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, canvas::Canvas},
     Frame, Terminal,
 };
 use tokio::runtime::Runtime;
@@ -201,7 +201,7 @@ impl App {
             .split(chunks_a[1]);
 
         let videos_list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title(" Videos "))
+            .block(Block::default().borders(Borders::ALL).title(" Result "))
             .style(if self.state == State::List {
                 selected_style
             } else {
