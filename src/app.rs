@@ -11,6 +11,7 @@ use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
 use ratatui::{
+    text::Line,
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -149,10 +150,16 @@ impl App {
     }
 
     pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
-        let default_style = Style::default();
-        let selected_style = Style::default().fg(Color::Yellow);
-        let selected_list_style = Style::default().fg(Color::Black).bg(Color::Yellow);
+        let default_style = Style::default().fg(Color::Reset);
+        let title_style = Style::default().fg(Color::Reset).add_modifier(Modifier::BOLD);
+        let selected_style = Style::default().fg(Color::Red);
+        let selected_list_style = Style::default().fg(Color::Reset).bg(Color::Red);
 
+        let mut search_title = Line::from("Search");
+        search_title.patch_style(title_style);
+        let mut result_title = Line::from("Results");
+        result_title.patch_style(title_style);
+        
         let chunks_a = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
@@ -161,7 +168,7 @@ impl App {
         let search_paragraph = Paragraph::new(self.input.as_str()).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Search ")
+                .title(search_title)
                 .border_style(if self.state == State::Search {
                     selected_style
                 } else {
@@ -186,7 +193,7 @@ impl App {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Results ")
+                    .title(result_title)
                     .border_style(if self.state == State::List {
                         selected_style
                     } else {
