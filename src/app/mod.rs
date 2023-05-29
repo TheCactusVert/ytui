@@ -5,18 +5,25 @@ use crate::Event;
 use crate::EventSender;
 use ui::*;
 
+use std::io::Cursor;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
+use image::imageops::FilterType;
+use image::io::Reader as ImageReader;
+use image::Pixel;
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::universal::Search;
 use ratatui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout},
-    style::Style,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, List, ListState, Paragraph},
+    widgets::{
+        canvas::{Canvas, Points},
+        Block, Borders, List, ListState, Paragraph,
+    },
     Frame,
 };
 use tokio::runtime::Runtime;
@@ -199,6 +206,40 @@ impl App {
             )
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
+
+        self.render_image(f, chunks_b[1])
+    }
+
+    fn render_image<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let img = ImageReader::new(Cursor::new(include_bytes!("../../static/splash.png")))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap()
+            .resize_exact(rect.width.into(), rect.height.into(), FilterType::Nearest)
+            .to_rgb8();
+
+        assert!(rect.width as u32 == img.width());
+        assert!(rect.height as u32 == img.height());
+
+        f.render_widget(
+            Canvas::default()
+                .x_bounds([0.0, (img.width() - 1) as f64])
+                .y_bounds([0.0, (img.height() - 1) as f64])
+                .paint(|p| {
+                    for x in 0..img.width() {
+                        for y in 0..img.height() {
+                            let pixel = img.get_pixel(x, y);
+                            let rgb = pixel.to_rgb();
+                            p.draw(&Points {
+                                coords: &[(x as f64, y as f64)],
+                                color: Color::Rgb(rgb.0[0], rgb.0[1], rgb.0[2]),
+                            })
+                        }
+                    }
+                }),
+            rect,
+        );
     }
 
     fn start_search(&mut self, search: String) {
