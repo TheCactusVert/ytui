@@ -1,3 +1,6 @@
+mod style;
+
+use style::*;
 use crate::util;
 use crate::Event;
 use crate::EventSender;
@@ -149,39 +152,11 @@ impl App {
         }
     }
 
-    const STYLE_DEFAULT: Style = Style {
-        fg: Some(Color::Reset),
-        bg: Some(Color::Reset),
-        add_modifier: Modifier::empty(),
-        sub_modifier: Modifier::empty(),
-    };
-
-    const STYLE_TITLE: Style = Style {
-        fg: Some(Color::Reset),
-        bg: Some(Color::Reset),
-        add_modifier: Modifier::BOLD,
-        sub_modifier: Modifier::empty(),
-    };
-
-    const STYLE_HIGHLIGHT: Style = Style {
-        fg: Some(Color::Red),
-        bg: Some(Color::Reset),
-        add_modifier: Modifier::empty(),
-        sub_modifier: Modifier::empty(),
-    };
-
-     const STYLE_HIGHLIGHT_ITEM: Style = Style {
-        fg: Some(Color::Reset),
-        bg: Some(Color::Red),
-        add_modifier: Modifier::empty(),
-        sub_modifier: Modifier::empty(),
-    };
-
     pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
         let mut search_title = Line::from("Search");
-        search_title.patch_style(Self::STYLE_TITLE);
+        search_title.patch_style(STYLE_TITLE);
         let mut result_title = Line::from("Results");
-        result_title.patch_style(Self::STYLE_TITLE);
+        result_title.patch_style(STYLE_TITLE);
         
         let chunks_a = Layout::default()
             .direction(Direction::Vertical)
@@ -193,9 +168,9 @@ impl App {
                 .borders(Borders::ALL)
                 .title(search_title)
                 .border_style(if self.state == State::Search {
-                    Self::STYLE_HIGHLIGHT
+                    STYLE_HIGHLIGHT
                 } else {
-                    Self::STYLE_DEFAULT
+                    STYLE_DEFAULT
                 }),
         );
         f.render_widget(search_paragraph, chunks_a[0]);
@@ -218,12 +193,12 @@ impl App {
                     .borders(Borders::ALL)
                     .title(result_title)
                     .border_style(if self.state == State::List {
-                        Self::STYLE_HIGHLIGHT
+                        STYLE_HIGHLIGHT
                     } else {
-                        Self::STYLE_DEFAULT
+                        STYLE_DEFAULT
                     }),
             )
-            .highlight_style(Self::STYLE_HIGHLIGHT_ITEM);
+            .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
     }
 
