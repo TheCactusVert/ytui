@@ -110,8 +110,8 @@ impl App {
                 Ok(p) => {}
                 Err(e) => {}
             },
-            KeyCode::Up => self.previous_video(),
-            KeyCode::Down => self.next_video(),
+            KeyCode::Char('k') | KeyCode::Up => self.previous_video(),
+            KeyCode::Char('j') | KeyCode::Down => self.next_video(),
             _ => {}
         }
     }
