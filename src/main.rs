@@ -1,9 +1,11 @@
 mod app;
 mod args;
 mod util;
+mod event;
 
 use app::App;
 use args::Args;
+use event::Event;
 
 use std::io;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -18,16 +20,6 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
-
-pub enum Event {
-    FocusGained,
-    FocusLost,
-    Key(KeyEvent),
-    Mouse(MouseEvent),
-    Paste(String),
-    Resize(u16, u16),
-    Fetch,
-}
 
 type EventSender = Sender<Event>;
 type EventReceiver = Receiver<Event>;
@@ -47,24 +39,18 @@ fn main() -> Result<()> {
     let tx_clone = tx.clone();
     thread::spawn(move || loop {
         let event = match crossterm::event::read() {
-            Ok(event) => match event {
-                crossterm::event::Event::FocusGained => Event::FocusGained,
-                crossterm::event::Event::FocusLost => Event::FocusLost,
-                crossterm::event::Event::Key(k) => Event::Key(k),
-                crossterm::event::Event::Mouse(m) => Event::Mouse(m),
-                crossterm::event::Event::Paste(p) => Event::Paste(p),
-                crossterm::event::Event::Resize(w, h) => Event::Resize(w, h),
-            },
+            Ok(event) => event,
             Err(e) => continue,
         };
 
-        tx_clone.send(event).unwrap();
+        tx_clone.send(event.into()).unwrap();
     });
 
     // create app and run it
     let mut app = App::new(tx.clone());
 
     while app.is_running() {
+        // Redraw the ui on event
         terminal.draw(|f| app.ui(f));
 
         match rx.recv() {
