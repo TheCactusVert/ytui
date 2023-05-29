@@ -25,27 +25,35 @@ impl VideosList {
     }
 
     pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(mut i) if self.search.items.len() != 0 => {
-                i += 1;
-                i %= self.search.items.len();
-                i
-            }
-            _ => 0,
-        };
-        self.state.select(Some(i));
+        if self.search.items.len() != 0 {
+            let i = match self.state.selected() {
+                Some(mut i) => {
+                    i += 1;
+                    i %= self.search.items.len();
+                    i
+                }
+                None => 0,
+            };
+            self.state.select(Some(i));
+        } else {
+            self.state.select(None);
+        }
     }
 
     pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(mut i) if self.search.items.len() != 0 => {
-                i -= 1;
-                i %= self.search.items.len();
-                i
-            }
-            _ => 0,
-        };
-        self.state.select(Some(i));
+        if self.search.items.len() != 0 {
+            let i = match self.state.selected() {
+                Some(mut i) => {
+                    i -= 1;
+                    i %= self.search.items.len();
+                    i
+                }
+                None => 0,
+            };
+            self.state.select(Some(i));
+        } else {
+            self.state.select(None);
+        }
     }
 
     pub fn unselect(&mut self) {

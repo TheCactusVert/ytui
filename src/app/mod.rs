@@ -35,7 +35,6 @@ enum State {
 pub struct App {
     state: State,
     input: String,
-    list: VideosList,
     rt: Runtime,
     search: SharedSearch,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
@@ -46,7 +45,6 @@ impl Default for App {
         Self {
             state: State::default(),
             input: String::default(),
-            list: VideosList::default(),
             rt: Runtime::new().unwrap(),
             search: Arc::new(Mutex::new(VideosList::default())),
             searcher: None,
@@ -68,10 +66,10 @@ impl App {
                 // Open video
             }
             KeyCode::Up => {
-                self.list.previous();
+                self.search.lock().unwrap().previous();
             }
             KeyCode::Down => {
-                self.list.next();
+                self.search.lock().unwrap().next();
             }
             _ => {}
         }
@@ -123,10 +121,9 @@ impl App {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(f.size());
 
-        let search = self.search.lock().unwrap();
-        let items: Vec<ListItem> = search
-            .search
-            .items
+        let mut search = self.search.lock().unwrap();
+        let items = search.search.items.clone();
+        let items: Vec<ListItem> = items
             .iter()
             .map(|v| {
                 ListItem::new(match v {
@@ -140,7 +137,7 @@ impl App {
             .collect();
 
         let videos_list = Self::ui_list(items);
-        f.render_stateful_widget(videos_list, chunks[0], &mut self.list.state);
+        f.render_stateful_widget(videos_list, chunks[0], &mut search.state);
 
         if self.state == State::Search {
             let search_paragraph = Self::ui_search(self.input.as_str());
