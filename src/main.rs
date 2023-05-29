@@ -1,5 +1,6 @@
 mod app;
 mod args;
+mod util;
 
 use app::App;
 use args::Args;

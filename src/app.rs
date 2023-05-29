@@ -1,3 +1,5 @@
+use crate::util;
+
 use std::io;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -177,19 +179,7 @@ impl App {
         }
 
         let search = self.search.lock().unwrap();
-        let items: Vec<ListItem> = search
-            .items
-            .iter()
-            .map(|v| {
-                ListItem::new(match v {
-                    Video { title, .. } => title.as_str(),
-                    Playlist { title, .. } => title.as_str(),
-                    Channel { name, .. } => name.as_str(),
-                    Unknown(_) => "Error",
-                })
-                .style(default_style)
-            })
-            .collect();
+        let items = util::search_to_list_items(&search);
 
         let chunks_b = Layout::default()
             .direction(Direction::Horizontal)
