@@ -5,7 +5,6 @@ use crate::EventSender;
 use std::io;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind};
 use invidious::reqwest::asynchronous::Client;

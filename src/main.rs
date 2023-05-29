@@ -1,7 +1,7 @@
 mod app;
 mod args;
-mod util;
 mod event;
+mod util;
 
 use app::App;
 use args::Args;
@@ -11,8 +11,7 @@ use std::io;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{anyhow, Result, Context};
 use clap::Parser;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyEvent, MouseEvent},
@@ -35,22 +34,23 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    // channel to handle events
     let (tx, rx): EventChannel = channel();
-    let tx_clone = tx.clone();
-    thread::spawn(move || loop {
-        let event = match crossterm::event::read() {
-            Ok(event) => event,
-            Err(e) => continue,
-        };
+    let term_tx = tx.clone();
 
-        tx_clone.send(event.into()).unwrap();
+    // thread to handle terminal events
+    thread::spawn(move || loop {
+        let ret: Result<()> = match crossterm::event::read() {
+            Ok(event) => term_tx.send(event.into()).context("tx error"),
+            Err(e) => Err(anyhow!(e)),
+        };
     });
 
     // create app and run it
     let mut app = App::new(tx.clone());
 
     while app.is_running() {
-        // Redraw the ui on event
+        // redraw the ui on event
         terminal.draw(|f| app.ui(f));
 
         match rx.recv() {
