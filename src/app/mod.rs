@@ -1,9 +1,9 @@
-mod style;
+mod ui;
 
 use crate::util;
 use crate::Event;
 use crate::EventSender;
-use style::*;
+use ui::*;
 
 use std::io;
 use std::process::Command;
