@@ -1,7 +1,3 @@
-mod videos;
-
-use videos::VideosList;
-
 use std::io;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -9,11 +5,12 @@ use std::time::Duration;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
+use invidious::structs::universal::Search;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use tokio::runtime::Runtime;
@@ -22,7 +19,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
 
-type SharedSearch = Arc<Mutex<VideosList>>;
+type SharedSearch = Arc<Mutex<Search>>;
 
 #[derive(PartialEq, Default, Debug)]
 enum State {
@@ -37,6 +34,7 @@ pub struct App {
     input: String,
     rt: Runtime,
     search: SharedSearch,
+    search_selection: ListState,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
 }
 
@@ -46,13 +44,50 @@ impl Default for App {
             state: State::default(),
             input: String::default(),
             rt: Runtime::new().unwrap(),
-            search: Arc::new(Mutex::new(VideosList::default())),
+            search: Arc::new(Mutex::new(Search { items: Vec::new() })),
+            search_selection: ListState::default(),
             searcher: None,
         }
     }
 }
 
 impl App {
+    fn next_video(&mut self) {
+        let search = self.search.lock().unwrap();
+        
+        if search.items.len() != 0 {
+            let i = match self.search_selection.selected() {
+                Some(mut i) => {
+                    i += 1;
+                    i %= search.items.len();
+                    i
+                }
+                None => 0,
+            };
+            self.search_selection.select(Some(i));
+        } else {
+            self.search_selection.select(None);
+        }
+    }
+
+    fn previous_video(&mut self) {
+        let search = self.search.lock().unwrap();
+
+        if search.items.len() != 0 {
+            let i = match self.search_selection.selected() {
+                Some(mut i) => {
+                    i -= 1;
+                    i %= search.items.len();
+                    i
+                }
+                None => 0,
+            };
+            self.search_selection.select(Some(i));
+        } else {
+            self.search_selection.select(None);
+        }
+    }
+    
     fn handle_event_list(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
@@ -65,11 +100,11 @@ impl App {
             KeyCode::Enter => {
                 // Open video
             }
-            KeyCode::Up => {
-                self.search.lock().unwrap().previous();
+            KeyCode::Up  => {
+                self.previous_video()
             }
             KeyCode::Down => {
-                self.search.lock().unwrap().next();
+                self.next_video();
             }
             _ => {}
         }
@@ -121,9 +156,9 @@ impl App {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(f.size());
 
-        let mut search = self.search.lock().unwrap();
-        let items = search.search.items.clone();
-        let items: Vec<ListItem> = items
+        let search = self.search.lock().unwrap();
+        let items: Vec<ListItem> = search
+            .items
             .iter()
             .map(|v| {
                 ListItem::new(match v {
@@ -137,7 +172,7 @@ impl App {
             .collect();
 
         let videos_list = Self::ui_list(items);
-        f.render_stateful_widget(videos_list, chunks[0], &mut search.state);
+        f.render_stateful_widget(videos_list, chunks[0], &mut self.search_selection);
 
         if self.state == State::Search {
             let search_paragraph = Self::ui_search(self.input.as_str());
@@ -212,7 +247,9 @@ impl App {
             self.rt.block_on(&mut thread.1).unwrap();
         }
 
-        *self.search.lock().unwrap() = VideosList::default();
+        let mut search = self.search.lock().unwrap();
+        search.items.clear();
+        self.search_selection.select(None);
     }
 
     async fn run_search(search: SharedSearch, token: CancellationToken, input: String) {
@@ -225,9 +262,8 @@ impl App {
             _ = token.cancelled() => return,
         };
 
-        // Lock only when data is received
         if let Ok(s) = result {
-            *search.lock().unwrap() = VideosList::with_items(s);
+            *search.lock().unwrap() = s;
         }
     }
 }
