@@ -54,9 +54,10 @@ impl Default for App {
 impl App {
     fn next_video(&mut self) {
         let search = self.search.lock().unwrap();
-        
+
         if search.items.len() != 0 {
             let i = match self.search_selection.selected() {
+                Some(i) if i == search.items.len() - 1 => search.items.len() - 1,
                 Some(mut i) => {
                     i += 1;
                     i %= search.items.len();
@@ -75,19 +76,20 @@ impl App {
 
         if search.items.len() != 0 {
             let i = match self.search_selection.selected() {
+                Some(i) if i == 0 => 0,
                 Some(mut i) => {
                     i -= 1;
                     i %= search.items.len();
                     i
                 }
-                None => 0,
+                None => search.items.len() - 1,
             };
             self.search_selection.select(Some(i));
         } else {
             self.search_selection.select(None);
         }
     }
-    
+
     fn handle_event_list(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
@@ -100,9 +102,7 @@ impl App {
             KeyCode::Enter => {
                 // Open video
             }
-            KeyCode::Up  => {
-                self.previous_video()
-            }
+            KeyCode::Up => self.previous_video(),
             KeyCode::Down => {
                 self.next_video();
             }
@@ -134,6 +134,7 @@ impl App {
         while self.state != State::Exit {
             terminal.draw(|f| self.ui(f))?;
 
+            // TODO remove this crap
             if crossterm::event::poll(Duration::from_millis(250))? {
                 if let Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
@@ -151,10 +152,24 @@ impl App {
     }
 
     fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+        let chunks_a = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
             .split(f.size());
+
+        let search_paragraph = Self::ui_search(self.input.as_str());
+        f.render_widget(search_paragraph, chunks_a[0]);
+        if self.state == State::Search {
+            f.set_cursor(
+                chunks_a[0].x + self.input.width() as u16 + 1,
+                chunks_a[0].y + 1,
+            );
+        }
+
+        let chunks_b = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+            .split(chunks_a[1]);
 
         let search = self.search.lock().unwrap();
         let items: Vec<ListItem> = search
@@ -172,15 +187,7 @@ impl App {
             .collect();
 
         let videos_list = Self::ui_list(items);
-        f.render_stateful_widget(videos_list, chunks[0], &mut self.search_selection);
-
-        if self.state == State::Search {
-            let search_paragraph = Self::ui_search(self.input.as_str());
-            let area = Self::centered_rect(60, 10, f.size());
-            f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(search_paragraph, area);
-            f.set_cursor(area.x + self.input.width() as u16 + 1, area.y + 1);
-        }
+        f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
     }
 
     fn ui_list<'a, T>(items: T) -> List<'a>
@@ -201,33 +208,6 @@ impl App {
         Paragraph::new(input)
             .block(Block::default().borders(Borders::ALL).title("Search"))
             .style(Style::default().fg(Color::Yellow))
-    }
-
-    /// helper function to create a centered rect using up certain percentage of the available rect `r`
-    fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-        let popup_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(
-                [
-                    Constraint::Percentage((100 - percent_y) / 2),
-                    Constraint::Percentage(percent_y),
-                    Constraint::Percentage((100 - percent_y) / 2),
-                ]
-                .as_ref(),
-            )
-            .split(r);
-
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(
-                [
-                    Constraint::Percentage((100 - percent_x) / 2),
-                    Constraint::Percentage(percent_x),
-                    Constraint::Percentage((100 - percent_x) / 2),
-                ]
-                .as_ref(),
-            )
-            .split(popup_layout[1])[1]
     }
 
     fn start_search(&mut self, input: String) {
