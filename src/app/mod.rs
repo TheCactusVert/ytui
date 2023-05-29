@@ -1,18 +1,21 @@
 mod videos;
-mod worker;
 
 use videos::VideosList;
-use worker::Worker;
 
+use std::error::Error;
+use std::io;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use std::{error::Error, io};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use invidious::reqwest::asynchronous::functions::search;
+use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
+use invidious::structs::universal::Search;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
@@ -21,7 +24,14 @@ use ratatui::{
     widgets::{canvas::Line, Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
+use tokio::runtime::Runtime;
+use tokio::select;
+use tokio::task::JoinHandle;
+use tokio_util::either::Either;
+use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
+
+type SharedSearch = Arc<Mutex<VideosList>>;
 
 #[derive(PartialEq, Default, Debug)]
 enum State {
@@ -31,12 +41,27 @@ enum State {
     Exit,
 }
 
-#[derive(Default)]
 pub struct App {
     state: State,
     input: String,
-    worker: Worker,
     list: VideosList,
+
+    search: SharedSearch,
+    rt: Runtime,
+    thread: Option<(CancellationToken, JoinHandle<()>)>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            state: State::default(),
+            input: String::default(),
+            list: VideosList::default(),
+            search: Arc::new(Mutex::new(VideosList::default())),
+            rt: Runtime::new().unwrap(),
+            thread: None,
+        }
+    }
 }
 
 impl App {
@@ -44,7 +69,7 @@ impl App {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 self.state = State::Exit;
-                self.worker.stop();
+                self.stop();
             }
             KeyCode::Char('/') => {
                 self.state = State::Search;
@@ -75,8 +100,8 @@ impl App {
             }
             KeyCode::Enter => {
                 self.state = State::List;
-                self.worker.stop();
-                self.worker.start(self.input.clone());
+                self.stop();
+                self.start(self.input.clone());
             }
             _ => {}
         }
@@ -108,12 +133,8 @@ impl App {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(f.size());
 
-        let search = self.worker.get_search();
-
-        self.list = VideosList::with_items(search);
-
-        let items: Vec<ListItem> = self
-            .list
+        let search = self.search.lock().unwrap();
+        let items: Vec<ListItem> = search
             .search
             .items
             .iter()
@@ -143,7 +164,7 @@ impl App {
     fn ui_list<'a, T>(items: T) -> List<'a>
     where
         T: Into<Vec<ListItem<'a>>>,
-     {
+    {
         List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Videos"))
             .style(Style::default())
@@ -186,5 +207,41 @@ impl App {
                 .as_ref(),
             )
             .split(popup_layout[1])[1]
+    }
+
+    fn start(&mut self, input: String) {
+        assert!(self.thread.is_none());
+
+        let token = CancellationToken::new();
+        let join = self
+            .rt
+            .spawn(Self::run(self.search.clone(), token.clone(), input));
+
+        self.thread = Some((token, join));
+    }
+
+    fn stop(&mut self) {
+        if let Some(mut thread) = self.thread.take() {
+            thread.0.cancel();
+            self.rt.block_on(&mut thread.1).unwrap();
+        }
+
+        *self.search.lock().unwrap() = VideosList::default();
+    }
+
+    async fn run(search: SharedSearch, token: CancellationToken, input: String) {
+        let client = Client::new(String::from("https://vid.puffyan.us"));
+        let input = format!("q={input}");
+        let fetch = client.search(Some(&input));
+
+        let result = select! {
+            s = fetch => s,
+            _ = token.cancelled() => return,
+        };
+
+        // Lock only when data is received
+        if let Ok(s) = result {
+            *search.lock().unwrap() = VideosList::with_items(s);
+        }
     }
 }
