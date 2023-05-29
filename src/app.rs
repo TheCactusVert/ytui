@@ -150,6 +150,9 @@ impl App {
     }
 
     fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
+        let default_style = Style::default();
+        let selected_style = Style::default().fg(Color::Yellow);
+        
         let chunks_a = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
@@ -157,7 +160,7 @@ impl App {
 
         let search_paragraph = Paragraph::new(self.input.as_str())
             .block(Block::default().borders(Borders::ALL).title(" Search "))
-            .style(Style::default().fg(Color::Yellow));
+            .style(if self.state == State::Search { selected_style } else { default_style } );
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
             f.set_cursor(
@@ -182,13 +185,13 @@ impl App {
                     Channel { name, .. } => name.as_str(),
                     Unknown(_) => "Error",
                 })
-                .style(Style::default())
+                .style(default_style)
             })
             .collect();
 
         let videos_list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title(" Videos "))
-            .style(Style::default())
+            .style(if self.state == State::List { selected_style } else { default_style })
             .highlight_style(
                 Style::default()
                     .bg(Color::LightGreen)
