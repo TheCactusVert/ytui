@@ -10,6 +10,7 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::convert::AsRef;
 
+use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::imageops::FilterType;
 use image::io::Reader as ImageReader;
@@ -208,15 +209,20 @@ impl App {
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
 
-        self.render_image(f, chunks_b[1], include_bytes!("../../static/logo.png"));
+        let chunks_c = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Ratio(16, 9), Constraint::Min(3)].as_ref())
+            .split(chunks_b[1]);
+
+        // TODO should be thumbnail
+        // TODO this shit is slow as fuck
+        self.render_image(f, chunks_c[0], include_bytes!("../../static/logo.png")).unwrap();
     }
 
-    fn render_image<B: Backend, T: AsRef<[u8]>>(&self, f: &mut Frame<B>, rect: Rect, data: T) {
+    fn render_image<B: Backend, T: AsRef<[u8]>>(&self, f: &mut Frame<B>, rect: Rect, data: T) -> Result<()> {
         let img = ImageReader::new(Cursor::new(data))
-            .with_guessed_format()
-            .unwrap()
-            .decode()
-            .unwrap()
+            .with_guessed_format()?
+            .decode()?
             .resize_exact(rect.width.into(), rect.height.into(), FilterType::Nearest)
             .to_rgb8();
 
@@ -240,6 +246,8 @@ impl App {
             });
 
         f.render_widget(canvas, rect);
+
+        Ok(())
     }
 
     fn start_search(&mut self, search: String) {
