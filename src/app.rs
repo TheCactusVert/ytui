@@ -8,9 +8,9 @@ use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
 use ratatui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use tokio::runtime::Runtime;
@@ -103,9 +103,7 @@ impl App {
                 // Open video
             }
             KeyCode::Up => self.previous_video(),
-            KeyCode::Down => {
-                self.next_video();
-            }
+            KeyCode::Down => self.next_video(),
             _ => {}
         }
     }
@@ -157,7 +155,9 @@ impl App {
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
             .split(f.size());
 
-        let search_paragraph = Self::ui_search(self.input.as_str());
+        let search_paragraph = Paragraph::new(self.input.as_str())
+            .block(Block::default().borders(Borders::ALL).title(" Search "))
+            .style(Style::default().fg(Color::Yellow));
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
             f.set_cursor(
@@ -186,28 +186,15 @@ impl App {
             })
             .collect();
 
-        let videos_list = Self::ui_list(items);
-        f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
-    }
-
-    fn ui_list<'a, T>(items: T) -> List<'a>
-    where
-        T: Into<Vec<ListItem<'a>>>,
-    {
-        List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Videos"))
+        let videos_list = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title(" Videos "))
             .style(Style::default())
             .highlight_style(
                 Style::default()
                     .bg(Color::LightGreen)
                     .add_modifier(Modifier::BOLD),
-            )
-    }
-
-    fn ui_search(input: &str) -> Paragraph {
-        Paragraph::new(input)
-            .block(Block::default().borders(Borders::ALL).title("Search"))
-            .style(Style::default().fg(Color::Yellow))
+            );
+        f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
     }
 
     fn start_search(&mut self, input: String) {
