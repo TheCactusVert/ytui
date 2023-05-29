@@ -14,7 +14,7 @@ use std::thread;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, KeyEvent, MouseEvent},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };

@@ -1,11 +1,4 @@
-use ratatui::{
-    backend::Backend,
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::Line,
-    widgets::{canvas::Canvas, Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame, Terminal,
-};
+use ratatui::style::{Color, Modifier, Style};
 
 pub const STYLE_DEFAULT: Style = Style {
     fg: Some(Color::Reset),

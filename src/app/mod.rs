@@ -5,21 +5,19 @@ use crate::Event;
 use crate::EventSender;
 use ui::*;
 
-use std::io;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
-use crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use invidious::reqwest::asynchronous::Client;
-use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::Style,
     text::Line,
-    widgets::{canvas::Canvas, Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame, Terminal,
+    widgets::{Block, Borders, List, ListState, Paragraph},
+    Frame,
 };
 use tokio::runtime::Runtime;
 use tokio::select;
