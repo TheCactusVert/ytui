@@ -178,15 +178,13 @@ impl App {
             );
         }
 
-        let search = self.search.lock().unwrap();
-        let items = util::search_to_list_items(&search);
-
         let chunks_b = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
             .split(chunks_a[1]);
 
-        let videos_list = List::new(items)
+        let search = self.search.lock().unwrap();
+        let videos_list = List::new(util::search_to_list_items(&search))
             .block(Block::default().borders(Borders::ALL).title(" Result "))
             .style(if self.state == State::List {
                 selected_style

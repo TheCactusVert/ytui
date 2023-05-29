@@ -1,7 +1,7 @@
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
-use ratatui::widgets::ListItem;
 use ratatui::style::Style;
+use ratatui::widgets::ListItem;
 
 pub fn search_to_list_items<'a>(search: &'a Search) -> Vec<ListItem<'a>> {
     search
