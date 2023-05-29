@@ -11,7 +11,7 @@ use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, canvas::Canvas},
+    widgets::{canvas::Canvas, Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use tokio::runtime::Runtime;
@@ -102,11 +102,7 @@ impl App {
                 self.state = State::Search;
             }
             KeyCode::Enter => match which("celluloid").or_else(|_| which("mpv")) {
-                Ok(p) => {
-                    Command::new(p)
-                        .spawn()
-                        .expect("mpv command failed to start");
-                }
+                Ok(p) => {}
                 Err(e) => {}
             },
             KeyCode::Up => self.previous_video(),
