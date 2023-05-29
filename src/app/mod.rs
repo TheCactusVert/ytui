@@ -1,9 +1,9 @@
 mod style;
 
-use style::*;
 use crate::util;
 use crate::Event;
 use crate::EventSender;
+use style::*;
 
 use std::io;
 use std::process::Command;
@@ -14,10 +14,10 @@ use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
 use ratatui::{
-    text::Line,
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
+    text::Line,
     widgets::{canvas::Canvas, Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
@@ -157,7 +157,7 @@ impl App {
         search_title.patch_style(STYLE_TITLE);
         let mut result_title = Line::from("Results");
         result_title.patch_style(STYLE_TITLE);
-        
+
         let chunks_a = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
