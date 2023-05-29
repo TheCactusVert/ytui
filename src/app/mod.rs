@@ -152,6 +152,14 @@ impl App {
         }
     }
 
+    fn get_border_style(&self, state: State) -> Style {
+        if self.state == state {
+            STYLE_HIGHLIGHT
+        } else {
+            STYLE_DEFAULT
+        }
+    }
+
     pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
         let mut search_title = Line::from("Search");
         search_title.patch_style(STYLE_TITLE);
@@ -167,11 +175,7 @@ impl App {
             Block::default()
                 .borders(Borders::ALL)
                 .title(search_title)
-                .border_style(if self.state == State::Search {
-                    STYLE_HIGHLIGHT
-                } else {
-                    STYLE_DEFAULT
-                }),
+                .border_style(self.get_border_style(State::Search)),
         );
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
@@ -192,11 +196,7 @@ impl App {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(result_title)
-                    .border_style(if self.state == State::List {
-                        STYLE_HIGHLIGHT
-                    } else {
-                        STYLE_DEFAULT
-                    }),
+                    .border_style(self.get_border_style(State::List)),
             )
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
