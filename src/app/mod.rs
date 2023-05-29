@@ -2,32 +2,23 @@ mod videos;
 
 use videos::VideosList;
 
-use std::error::Error;
 use std::io;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use invidious::reqwest::asynchronous::functions::search;
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
-use invidious::structs::universal::Search;
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
+    backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Text},
-    widgets::{canvas::Line, Block, Borders, Clear, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
     Frame, Terminal,
 };
 use tokio::runtime::Runtime;
 use tokio::select;
 use tokio::task::JoinHandle;
-use tokio_util::either::Either;
 use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
 
@@ -45,10 +36,9 @@ pub struct App {
     state: State,
     input: String,
     list: VideosList,
-
-    search: SharedSearch,
     rt: Runtime,
-    thread: Option<(CancellationToken, JoinHandle<()>)>,
+    search: SharedSearch,
+    searcher: Option<(CancellationToken, JoinHandle<()>)>,
 }
 
 impl Default for App {
@@ -57,9 +47,9 @@ impl Default for App {
             state: State::default(),
             input: String::default(),
             list: VideosList::default(),
-            search: Arc::new(Mutex::new(VideosList::default())),
             rt: Runtime::new().unwrap(),
-            thread: None,
+            search: Arc::new(Mutex::new(VideosList::default())),
+            searcher: None,
         }
     }
 }
@@ -69,7 +59,7 @@ impl App {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 self.state = State::Exit;
-                self.stop();
+                self.stop_search();
             }
             KeyCode::Char('/') => {
                 self.state = State::Search;
@@ -100,8 +90,8 @@ impl App {
             }
             KeyCode::Enter => {
                 self.state = State::List;
-                self.stop();
-                self.start(self.input.clone());
+                self.stop_search();
+                self.start_search(self.input.clone());
             }
             _ => {}
         }
@@ -173,7 +163,6 @@ impl App {
                     .bg(Color::LightGreen)
                     .add_modifier(Modifier::BOLD),
             )
-            .highlight_symbol(">> ")
     }
 
     fn ui_search(input: &str) -> Paragraph {
@@ -209,19 +198,19 @@ impl App {
             .split(popup_layout[1])[1]
     }
 
-    fn start(&mut self, input: String) {
-        assert!(self.thread.is_none());
+    fn start_search(&mut self, input: String) {
+        assert!(self.searcher.is_none());
 
         let token = CancellationToken::new();
         let join = self
             .rt
-            .spawn(Self::run(self.search.clone(), token.clone(), input));
+            .spawn(Self::run_search(self.search.clone(), token.clone(), input));
 
-        self.thread = Some((token, join));
+        self.searcher = Some((token, join));
     }
 
-    fn stop(&mut self) {
-        if let Some(mut thread) = self.thread.take() {
+    fn stop_search(&mut self) {
+        if let Some(mut thread) = self.searcher.take() {
             thread.0.cancel();
             self.rt.block_on(&mut thread.1).unwrap();
         }
@@ -229,7 +218,7 @@ impl App {
         *self.search.lock().unwrap() = VideosList::default();
     }
 
-    async fn run(search: SharedSearch, token: CancellationToken, input: String) {
+    async fn run_search(search: SharedSearch, token: CancellationToken, input: String) {
         let client = Client::new(String::from("https://vid.puffyan.us"));
         let input = format!("q={input}");
         let fetch = client.search(Some(&input));

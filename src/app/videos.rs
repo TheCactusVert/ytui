@@ -1,11 +1,5 @@
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
 use invidious::structs::universal::Search;
-use ratatui::widgets::{canvas::Line, Block, Borders, List, ListItem, ListState, Paragraph};
-use unicode_width::UnicodeWidthStr;
+use ratatui::widgets::ListState;
 
 #[derive(Clone)]
 pub struct VideosList {
@@ -32,28 +26,24 @@ impl VideosList {
 
     pub fn next(&mut self) {
         let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.search.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
+            Some(mut i) if self.search.items.len() != 0 => {
+                i += 1;
+                i %= self.search.items.len();
+                i
             }
-            None => 0,
+            _ => 0,
         };
         self.state.select(Some(i));
     }
 
     pub fn previous(&mut self) {
         let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.search.items.len() - 1
-                } else {
-                    i - 1
-                }
+            Some(mut i) if self.search.items.len() != 0 => {
+                i -= 1;
+                i %= self.search.items.len();
+                i
             }
-            None => 0,
+            _ => 0,
         };
         self.state.select(Some(i));
     }
