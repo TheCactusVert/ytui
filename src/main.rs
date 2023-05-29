@@ -9,8 +9,8 @@ use std::io;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use clap::Parser;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyEvent, MouseEvent},
@@ -54,10 +54,10 @@ fn main() -> Result<()> {
                 crossterm::event::Event::Mouse(m) => Event::Mouse(m),
                 crossterm::event::Event::Paste(p) => Event::Paste(p),
                 crossterm::event::Event::Resize(w, h) => Event::Resize(w, h),
-            }
+            },
             Err(e) => continue,
         };
-            
+
         tx_clone.send(event).unwrap();
     });
 
@@ -66,9 +66,12 @@ fn main() -> Result<()> {
 
     while app.is_running() {
         terminal.draw(|f| app.ui(f));
-        
+
         match rx.recv() {
-            Ok(event) => app.handle_event(event),
+            Ok(event) => match event {
+                Event::Key(key) => app.handle_key_event(key),
+                _ => {}
+            },
             Err(e) => {}
         }
     }

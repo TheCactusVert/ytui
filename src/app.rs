@@ -1,13 +1,13 @@
 use crate::util;
-use crate::EventSender;
 use crate::Event;
+use crate::EventSender;
 
 use std::io;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crossterm::event::{self, KeyCode, KeyEventKind};
+use crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind};
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::{Channel, Playlist, Unknown, Video};
 use invidious::structs::universal::Search;
@@ -57,7 +57,7 @@ impl App {
             searcher: None,
         }
     }
-    
+
     fn next_video(&mut self) {
         let search = self.search.lock().unwrap();
 
@@ -139,14 +139,12 @@ impl App {
         self.state != State::Exit
     }
 
-    pub fn handle_event(&mut self, event: Event) {
-        if let Event::Key(key) = event {
-            if key.kind == KeyEventKind::Press {
-                match self.state {
-                    State::List => self.handle_event_list(key.code),
-                    State::Search => self.handle_event_search(key.code),
-                    _ => {}
-                }
+    pub fn handle_key_event(&mut self, key: KeyEvent) {
+        if key.kind == KeyEventKind::Press {
+            match self.state {
+                State::List => self.handle_event_list(key.code),
+                State::Search => self.handle_event_search(key.code),
+                _ => {}
             }
         }
     }
@@ -200,9 +198,12 @@ impl App {
         assert!(self.searcher.is_none());
 
         let token = CancellationToken::new();
-        let join = self
-            .rt
-            .spawn(Self::run_search(self.event_tx.clone(), self.search.clone(), token.clone(), input));
+        let join = self.rt.spawn(Self::run_search(
+            self.event_tx.clone(),
+            self.search.clone(),
+            token.clone(),
+            input,
+        ));
 
         self.searcher = Some((token, join));
     }
@@ -218,7 +219,12 @@ impl App {
         self.search_selection.select(None);
     }
 
-    async fn run_search(event_tx: EventSender, search: SharedSearch, token: CancellationToken, input: String) {
+    async fn run_search(
+        event_tx: EventSender,
+        search: SharedSearch,
+        token: CancellationToken,
+        input: String,
+    ) {
         let client = Client::new(String::from("https://vid.puffyan.us"));
         let input = format!("q={input}");
         let fetch = client.search(Some(&input));
