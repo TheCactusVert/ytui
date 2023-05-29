@@ -151,19 +151,23 @@ impl App {
     pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
         let default_style = Style::default();
         let selected_style = Style::default().fg(Color::Yellow);
+        let selected_list_style = Style::default().fg(Color::Black).bg(Color::Yellow);
 
         let chunks_a = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
             .split(f.size());
 
-        let search_paragraph = Paragraph::new(self.input.as_str())
-            .block(Block::default().borders(Borders::ALL).title(" Search "))
-            .style(if self.state == State::Search {
-                selected_style
-            } else {
-                default_style
-            });
+        let search_paragraph = Paragraph::new(self.input.as_str()).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Search ")
+                .border_style(if self.state == State::Search {
+                    selected_style
+                } else {
+                    default_style
+                }),
+        );
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
             f.set_cursor(
@@ -179,17 +183,17 @@ impl App {
 
         let search = self.search.lock().unwrap();
         let videos_list = List::new(util::search_to_list_items(&search))
-            .block(Block::default().borders(Borders::ALL).title(" Result "))
-            .style(if self.state == State::List {
-                selected_style
-            } else {
-                default_style
-            })
-            .highlight_style(
-                Style::default()
-                    .bg(Color::LightGreen)
-                    .add_modifier(Modifier::BOLD),
-            );
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Results ")
+                    .border_style(if self.state == State::List {
+                        selected_style
+                    } else {
+                        default_style
+                    }),
+            )
+            .highlight_style(selected_list_style);
         f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
     }
 

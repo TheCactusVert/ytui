@@ -11,7 +11,7 @@ use std::io;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use anyhow::{anyhow, Result, Context};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, KeyEvent, MouseEvent},
