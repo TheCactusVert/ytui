@@ -8,6 +8,7 @@ use ui::*;
 use std::io::Cursor;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
+use std::convert::AsRef;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::imageops::FilterType;
@@ -207,11 +208,11 @@ impl App {
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
 
-        self.render_image(f, chunks_b[1])
+        self.render_image(f, chunks_b[1], include_bytes!("../../static/logo.png"));
     }
 
-    fn render_image<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
-        let img = ImageReader::new(Cursor::new(include_bytes!("../../static/splash.png")))
+    fn render_image<B: Backend, T: AsRef<[u8]>>(&self, f: &mut Frame<B>, rect: Rect, data: T) {
+        let img = ImageReader::new(Cursor::new(data))
             .with_guessed_format()
             .unwrap()
             .decode()
@@ -222,24 +223,23 @@ impl App {
         assert!(rect.width as u32 == img.width());
         assert!(rect.height as u32 == img.height());
 
-        f.render_widget(
-            Canvas::default()
-                .x_bounds([0.0, (img.width() - 1) as f64])
-                .y_bounds([0.0, (img.height() - 1) as f64])
-                .paint(|p| {
-                    for x in 0..img.width() {
-                        for y in 0..img.height() {
-                            let pixel = img.get_pixel(x, y);
-                            let rgb = pixel.to_rgb();
-                            p.draw(&Points {
-                                coords: &[(x as f64, y as f64)],
-                                color: Color::Rgb(rgb.0[0], rgb.0[1], rgb.0[2]),
-                            })
-                        }
+        let canvas = Canvas::default()
+            .x_bounds([0.0, (img.width() - 1) as f64])
+            .y_bounds([0.0, (img.height() - 1) as f64])
+            .paint(|p| {
+                for x in 0..img.width() {
+                    for y in 0..img.height() {
+                        let pixel = img.get_pixel(x, y);
+                        let rgb = pixel.to_rgb();
+                        p.draw(&Points {
+                            coords: &[(x as f64, y as f64)],
+                            color: Color::Rgb(rgb.0[0], rgb.0[1], rgb.0[2]),
+                        })
                     }
-                }),
-            rect,
-        );
+                }
+            });
+
+        f.render_widget(canvas, rect);
     }
 
     fn start_search(&mut self, search: String) {
