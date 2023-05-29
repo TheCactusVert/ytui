@@ -40,11 +40,11 @@ enum State {
 
 pub struct App {
     state: State,
-    input: String,
     rt: Runtime,
     event_tx: EventSender,
-    search: SharedSearch,
-    search_selection: ListState,
+    input: String,
+    result_search: SharedSearch,
+    result_search_selection: ListState,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
 }
 
@@ -52,50 +52,50 @@ impl App {
     pub fn new(event_tx: EventSender) -> Self {
         Self {
             state: State::default(),
-            input: String::default(),
             rt: Runtime::new().unwrap(),
             event_tx,
-            search: Arc::new(Mutex::new(Search { items: Vec::new() })),
-            search_selection: ListState::default(),
+            input: String::default(),
+            result_search: Arc::new(Mutex::new(Search { items: Vec::new() })),
+            result_search_selection: ListState::default(),
             searcher: None,
         }
     }
 
     fn next_video(&mut self) {
-        let search = self.search.lock().unwrap();
+        let result_search = self.result_search.lock().unwrap();
 
-        if search.items.len() != 0 {
-            let i = match self.search_selection.selected() {
-                Some(i) if i == search.items.len() - 1 => search.items.len() - 1,
+        if result_search.items.len() != 0 {
+            let i = match self.result_search_selection.selected() {
+                Some(i) if i == result_search.items.len() - 1 => result_search.items.len() - 1,
                 Some(mut i) => {
                     i += 1;
-                    i %= search.items.len();
+                    i %= result_search.items.len();
                     i
                 }
                 None => 0,
             };
-            self.search_selection.select(Some(i));
+            self.result_search_selection.select(Some(i));
         } else {
-            self.search_selection.select(None);
+            self.result_search_selection.select(None);
         }
     }
 
     fn previous_video(&mut self) {
-        let search = self.search.lock().unwrap();
+        let result_search = self.result_search.lock().unwrap();
 
-        if search.items.len() != 0 {
-            let i = match self.search_selection.selected() {
+        if result_search.items.len() != 0 {
+            let i = match self.result_search_selection.selected() {
                 Some(i) if i == 0 => 0,
                 Some(mut i) => {
                     i -= 1;
-                    i %= search.items.len();
+                    i %= result_search.items.len();
                     i
                 }
-                None => search.items.len() - 1,
+                None => result_search.items.len() - 1,
             };
-            self.search_selection.select(Some(i));
+            self.result_search_selection.select(Some(i));
         } else {
-            self.search_selection.select(None);
+            self.result_search_selection.select(None);
         }
     }
 
@@ -190,8 +190,9 @@ impl App {
             .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
             .split(chunks_a[1]);
 
-        let search = self.search.lock().unwrap();
-        let videos_list = List::new(util::search_to_list_items(&search))
+        let result_search = self.result_search.lock().unwrap();
+        let result_items = util::search_to_list_items(&result_search);
+        let result_list = List::new(result_items)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -199,7 +200,7 @@ impl App {
                     .border_style(self.get_border_style(State::List)),
             )
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
-        f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
+        f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
     }
 
     fn start_search(&mut self, input: String) {
@@ -208,7 +209,7 @@ impl App {
         let token = CancellationToken::new();
         let join = self.rt.spawn(Self::run_search(
             self.event_tx.clone(),
-            self.search.clone(),
+            self.result_search.clone(),
             token.clone(),
             input,
         ));
@@ -222,20 +223,20 @@ impl App {
             self.rt.block_on(&mut thread.1).unwrap();
         }
 
-        let mut search = self.search.lock().unwrap();
-        search.items.clear();
-        self.search_selection.select(None);
+        let mut result_search = self.result_search.lock().unwrap();
+        result_search.items.clear();
+        self.result_search_selection.select(None);
     }
 
     async fn run_search(
         event_tx: EventSender,
-        search: SharedSearch,
+        result_search: SharedSearch,
         token: CancellationToken,
-        input: String,
+        search: String,
     ) {
         let client = Client::new(String::from("https://vid.puffyan.us"));
-        let input = format!("q={input}");
-        let fetch = client.search(Some(&input));
+        let search = format!("q={search}");
+        let fetch = client.search(Some(&search));
 
         let result = select! {
             s = fetch => s,
@@ -243,7 +244,7 @@ impl App {
         };
 
         if let Ok(s) = result {
-            *search.lock().unwrap() = s;
+            *result_search.lock().unwrap() = s;
         }
 
         event_tx.send(Event::Fetch).unwrap();
