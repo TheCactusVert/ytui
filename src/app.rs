@@ -149,16 +149,39 @@ impl App {
         }
     }
 
-    pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
-        let default_style = Style::default().fg(Color::Reset);
-        let title_style = Style::default().fg(Color::Reset).add_modifier(Modifier::BOLD);
-        let selected_style = Style::default().fg(Color::Red);
-        let selected_list_style = Style::default().fg(Color::Reset).bg(Color::Red);
+    const STYLE_DEFAULT: Style = Style {
+        fg: Some(Color::Reset),
+        bg: Some(Color::Reset),
+        add_modifier: Modifier::empty(),
+        sub_modifier: Modifier::empty(),
+    };
 
+    const STYLE_TITLE: Style = Style {
+        fg: Some(Color::Reset),
+        bg: Some(Color::Reset),
+        add_modifier: Modifier::BOLD,
+        sub_modifier: Modifier::empty(),
+    };
+
+    const STYLE_HIGHLIGHT: Style = Style {
+        fg: Some(Color::Red),
+        bg: Some(Color::Reset),
+        add_modifier: Modifier::empty(),
+        sub_modifier: Modifier::empty(),
+    };
+
+     const STYLE_HIGHLIGHT_ITEM: Style = Style {
+        fg: Some(Color::Reset),
+        bg: Some(Color::Red),
+        add_modifier: Modifier::empty(),
+        sub_modifier: Modifier::empty(),
+    };
+
+    pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
         let mut search_title = Line::from("Search");
-        search_title.patch_style(title_style);
+        search_title.patch_style(Self::STYLE_TITLE);
         let mut result_title = Line::from("Results");
-        result_title.patch_style(title_style);
+        result_title.patch_style(Self::STYLE_TITLE);
         
         let chunks_a = Layout::default()
             .direction(Direction::Vertical)
@@ -170,9 +193,9 @@ impl App {
                 .borders(Borders::ALL)
                 .title(search_title)
                 .border_style(if self.state == State::Search {
-                    selected_style
+                    Self::STYLE_HIGHLIGHT
                 } else {
-                    default_style
+                    Self::STYLE_DEFAULT
                 }),
         );
         f.render_widget(search_paragraph, chunks_a[0]);
@@ -195,12 +218,12 @@ impl App {
                     .borders(Borders::ALL)
                     .title(result_title)
                     .border_style(if self.state == State::List {
-                        selected_style
+                        Self::STYLE_HIGHLIGHT
                     } else {
-                        default_style
+                        Self::STYLE_DEFAULT
                     }),
             )
-            .highlight_style(selected_list_style);
+            .highlight_style(Self::STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(videos_list, chunks_b[0], &mut self.search_selection);
     }
 
