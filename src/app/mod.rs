@@ -42,7 +42,7 @@ pub struct App {
     state: State,
     rt: Runtime,
     event_tx: EventSender,
-    input: String,
+    search: String,
     result_search: SharedSearch,
     result_search_selection: ListState,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
@@ -54,7 +54,7 @@ impl App {
             state: State::default(),
             rt: Runtime::new().unwrap(),
             event_tx,
-            input: String::default(),
+            search: String::default(),
             result_search: Arc::new(Mutex::new(Search { items: Vec::new() })),
             result_search_selection: ListState::default(),
             searcher: None,
@@ -121,10 +121,10 @@ impl App {
     fn handle_event_search(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char(c) => {
-                self.input.push(c);
+                self.search.push(c);
             }
             KeyCode::Backspace => {
-                self.input.pop();
+                self.search.pop();
             }
             KeyCode::Esc => {
                 self.state = State::List;
@@ -132,7 +132,7 @@ impl App {
             KeyCode::Enter => {
                 self.state = State::List;
                 self.stop_search();
-                self.start_search(self.input.clone());
+                self.start_search(self.search.clone());
             }
             _ => {}
         }
@@ -171,7 +171,7 @@ impl App {
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
             .split(f.size());
 
-        let search_paragraph = Paragraph::new(self.input.as_str()).block(
+        let search_paragraph = Paragraph::new(self.search.as_str()).block(
             Block::default()
                 .borders(Borders::ALL)
                 .title(search_title)
@@ -180,7 +180,7 @@ impl App {
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
             f.set_cursor(
-                chunks_a[0].x + self.input.width() as u16 + 1,
+                chunks_a[0].x + self.search.width() as u16 + 1,
                 chunks_a[0].y + 1,
             );
         }
@@ -203,7 +203,7 @@ impl App {
         f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
     }
 
-    fn start_search(&mut self, input: String) {
+    fn start_search(&mut self, search: String) {
         assert!(self.searcher.is_none());
 
         let token = CancellationToken::new();
@@ -211,7 +211,7 @@ impl App {
             self.event_tx.clone(),
             self.result_search.clone(),
             token.clone(),
-            input,
+            search,
         ));
 
         self.searcher = Some((token, join));
