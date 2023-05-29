@@ -6,16 +6,24 @@ use app::App;
 use args::Args;
 
 use std::io;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
 
+use anyhow::Result;
+use anyhow::anyhow;
 use clap::Parser;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{DisableMouseCapture, EnableMouseCapture, Event},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 
-fn main() -> Result<(), io::Error> {
+type EventSender = Sender<Event>;
+type EventReceiver = Receiver<Event>;
+type EventChannel = (EventSender, EventReceiver);
+
+fn main() -> Result<()> {
     let args = Args::parse();
 
     // setup terminal
@@ -25,9 +33,26 @@ fn main() -> Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    let (tx, rx): EventChannel = channel();
+    let tx_clone = tx.clone();
+    thread::spawn(move || loop {
+        let event = crossterm::event::read().unwrap();
+        tx_clone.send(event).unwrap();
+    });
+
     // create app and run it
     let mut app = App::default();
-    let res = app.exec(&mut terminal);
+
+    let mut ret = Ok(());
+
+    while app.is_running() {
+        terminal.draw(|f| app.ui(f));
+        
+        match rx.recv() {
+            Ok(event) => app.handle_event(event),
+            Err(e) => {}
+        }
+    }
 
     // restore terminal
     disable_raw_mode()?;
@@ -38,9 +63,5 @@ fn main() -> Result<(), io::Error> {
     )?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        println!("{err:?}");
-    }
-
-    Ok(())
+    ret
 }

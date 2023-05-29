@@ -133,28 +133,23 @@ impl App {
         }
     }
 
-    pub fn exec<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
-        while self.state != State::Exit {
-            terminal.draw(|f| self.ui(f))?;
+    pub fn is_running(&self) -> bool {
+        self.state != State::Exit
+    }
 
-            // TODO remove this crap
-            if crossterm::event::poll(Duration::from_millis(250))? {
-                if let Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press {
-                        match self.state {
-                            State::List => self.handle_event_list(key.code),
-                            State::Search => self.handle_event_search(key.code),
-                            _ => {}
-                        }
-                    }
+    pub fn handle_event(&mut self, event: Event) {
+        if let Event::Key(key) = event {
+            if key.kind == KeyEventKind::Press {
+                match self.state {
+                    State::List => self.handle_event_list(key.code),
+                    State::Search => self.handle_event_search(key.code),
+                    _ => {}
                 }
             }
         }
-
-        Ok(())
     }
 
-    fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
+    pub fn ui<B: Backend>(&mut self, f: &mut Frame<B>) {
         let default_style = Style::default();
         let selected_style = Style::default().fg(Color::Yellow);
 
