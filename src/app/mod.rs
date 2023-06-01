@@ -283,14 +283,14 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .constraints([Constraint::Min(1), Constraint::Min(1)].as_ref())
             .split(rect);
 
         let title = Paragraph::new(title).style(STYLE_TITLE);
-        f.render_widget(title, chunks[1]);
+        f.render_widget(title, chunks[0]);
 
         let author = Paragraph::new(author).style(STYLE_AUTHOR);
-        f.render_widget(author, chunks[2]);
+        f.render_widget(author, chunks[1]);
     }
 
     fn ui_channel<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, name: &str, description: &str) {
@@ -303,17 +303,23 @@ impl App {
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
 
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
+        let chunks_a = Layout::default()
+            .direction(Direction::Horizontal)
             .margin(1)
-            .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .constraints([Constraint::Length(32), Constraint::Min(1)].as_ref())
             .split(rect);
 
+        let chunks_b = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints([Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .split(chunks_a[1]);
+
         let name = Paragraph::new(name).style(STYLE_TITLE);
-        f.render_widget(name, chunks[1]);
+        f.render_widget(name, chunks_b[0]);
 
         let description = Paragraph::new(description).style(STYLE_AUTHOR);
-        f.render_widget(description, chunks[2]);
+        f.render_widget(description, chunks_b[1]);
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
