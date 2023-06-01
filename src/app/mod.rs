@@ -5,10 +5,10 @@ use crate::Event;
 use crate::EventSender;
 use ui::*;
 
+use std::convert::AsRef;
 use std::io::Cursor;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use std::convert::AsRef;
 
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
@@ -17,6 +17,7 @@ use image::io::Reader as ImageReader;
 use image::Pixel;
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::universal::Search;
+use invidious::structs::hidden::SearchItem::*;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -42,6 +43,7 @@ enum State {
     #[default]
     List,
     Search,
+    Item,
     Exit,
 }
 
@@ -106,25 +108,6 @@ impl App {
         }
     }
 
-    fn handle_event_list(&mut self, code: KeyCode) {
-        match code {
-            KeyCode::Char('q') | KeyCode::Esc => {
-                self.state = State::Exit;
-                self.stop_search();
-            }
-            KeyCode::Char('/') => {
-                self.state = State::Search;
-            }
-            KeyCode::Enter => match which("celluloid").or_else(|_| which("mpv")) {
-                Ok(p) => {}
-                Err(e) => {}
-            },
-            KeyCode::Char('k') | KeyCode::Up => self.previous_video(),
-            KeyCode::Char('j') | KeyCode::Down => self.next_video(),
-            _ => {}
-        }
-    }
-
     fn handle_event_search(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char(c) => {
@@ -145,6 +128,44 @@ impl App {
         }
     }
 
+    fn handle_event_list(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                self.state = State::Exit;
+                self.stop_search();
+            }
+            KeyCode::Char('/') => {
+                self.state = State::Search;
+            }
+            KeyCode::Enter => match which("celluloid").or_else(|_| which("mpv")) {
+                Ok(p) => {}
+                Err(e) => {}
+            },
+            KeyCode::Char('k') | KeyCode::Up => self.previous_video(),
+            KeyCode::Char('j') | KeyCode::Down => self.next_video(),
+            KeyCode::Tab => {
+                self.state = State::Item;
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_event_item(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                self.state = State::Exit;
+                self.stop_search();
+            }
+            KeyCode::Char('/') => {
+                self.state = State::Search;
+            }
+            KeyCode::Tab => {
+                self.state = State::List;
+            }
+            _ => {}
+        }
+    }
+
     pub fn is_running(&self) -> bool {
         self.state != State::Exit
     }
@@ -154,6 +175,7 @@ impl App {
             match self.state {
                 State::List => self.handle_event_list(key.code),
                 State::Search => self.handle_event_search(key.code),
+                State::Item => self.handle_event_item(key.code),
                 _ => {}
             }
         }
@@ -209,17 +231,50 @@ impl App {
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
 
-        let chunks_c = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Ratio(16, 9), Constraint::Min(3)].as_ref())
-            .split(chunks_b[1]);
+        if let Some(i) = self.result_search_selection.selected() {
+            match &result_search.items[i] {
+                Video { .. } => self.ui_video(f, chunks_b[1]),
+                Playlist { .. } => self.ui_playlist(f, chunks_b[1]),
+                Channel { .. } => self.ui_channel(f, chunks_b[1]),
+                Unknown { .. } => {}
+            }
+        }
 
         // TODO should be thumbnail
         // TODO this shit is slow as fuck
-        self.render_image(f, chunks_c[0], include_bytes!("../../static/logo.png")).unwrap();
+        //self.render_image(f, chunks_c[0], include_bytes!("../../static/logo.png")).unwrap();
     }
 
-    fn render_image<B: Backend, T: AsRef<[u8]>>(&self, f: &mut Frame<B>, rect: Rect, data: T) -> Result<()> {
+    fn ui_video<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title("Video")
+            .border_style(self.get_border_style(State::Item));
+        f.render_widget(block, rect);
+    }
+
+    fn ui_playlist<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title("Playlist")
+            .border_style(self.get_border_style(State::Item));
+        f.render_widget(block, rect);
+    }
+
+    fn ui_channel<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title("Channel")
+            .border_style(self.get_border_style(State::Item));
+        f.render_widget(block, rect);
+    }
+
+    fn render_image<B: Backend, T: AsRef<[u8]>>(
+        &self,
+        f: &mut Frame<B>,
+        rect: Rect,
+        data: T,
+    ) -> Result<()> {
         let img = ImageReader::new(Cursor::new(data))
             .with_guessed_format()?
             .decode()?
