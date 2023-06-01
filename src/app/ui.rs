@@ -14,6 +14,13 @@ pub const STYLE_TITLE: Style = Style {
     sub_modifier: Modifier::empty(),
 };
 
+pub const STYLE_AUTHOR: Style = Style {
+    fg: Some(Color::Reset),
+    bg: Some(Color::Reset),
+    add_modifier: Modifier::DIM,
+    sub_modifier: Modifier::empty(),
+};
+
 pub const STYLE_HIGHLIGHT: Style = Style {
     fg: Some(Color::Red),
     bg: Some(Color::Reset),

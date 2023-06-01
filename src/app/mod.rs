@@ -270,7 +270,7 @@ impl App {
         let title = Paragraph::new(title).style(STYLE_TITLE);
         f.render_widget(title, chunks[1]);
 
-        let author = Paragraph::new(author).style(Style::default());
+        let author = Paragraph::new(author).style(STYLE_AUTHOR);
         f.render_widget(author, chunks[2]);
     }
 
