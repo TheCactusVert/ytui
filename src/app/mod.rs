@@ -241,10 +241,6 @@ impl App {
         } else {
             self.ui_empty(f, chunks_b[1]);
         }
-
-        // TODO should be thumbnail
-        // TODO this shit is slow as fuck
-        //self.render_image(f, chunks_c[0], include_bytes!("../../static/logo.png")).unwrap();
     }
 
     fn ui_video<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, title: &str, author: &str) {
@@ -262,10 +258,10 @@ impl App {
             .margin(1)
             .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
             .split(rect);
-
-        // Top left inner block with green background
-        let block = Block::default().style(Style::default().bg(Color::Red));
-        f.render_widget(block, chunks[0]);
+        
+        // TODO should be thumbnail
+        // TODO this shit is slow as fuck
+        //self.render_image(f, chunks[0], include_bytes!("../../static/logo.png")).unwrap();
 
         let title = Paragraph::new(title).style(STYLE_TITLE);
         f.render_widget(title, chunks[1]);
