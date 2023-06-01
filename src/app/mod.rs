@@ -234,8 +234,8 @@ impl App {
         if let Some(i) = self.result_search_selection.selected() {
             match &result_search.items[i] {
                 Video { title, author, .. } => self.ui_video(f, chunks_b[1], title, author),
-                Playlist { .. } => self.ui_playlist(f, chunks_b[1]),
-                Channel { .. } => self.ui_channel(f, chunks_b[1]),
+                Playlist { title, author, .. } => self.ui_playlist(f, chunks_b[1], title, author),
+                Channel { name, description, .. } => self.ui_channel(f, chunks_b[1], name, description),
                 Unknown { .. } => self.ui_empty(f, chunks_b[1]),
             }
         } else {
@@ -270,7 +270,7 @@ impl App {
         f.render_widget(author, chunks[2]);
     }
 
-    fn ui_playlist<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+    fn ui_playlist<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, title: &str, author: &str) {
         let mut playlist_title = Line::from("Playlist");
         playlist_title.patch_style(STYLE_TITLE);
 
@@ -279,9 +279,21 @@ impl App {
             .title(playlist_title)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .split(rect);
+
+        let title = Paragraph::new(title).style(STYLE_TITLE);
+        f.render_widget(title, chunks[1]);
+
+        let author = Paragraph::new(author).style(STYLE_AUTHOR);
+        f.render_widget(author, chunks[2]);
     }
 
-    fn ui_channel<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+    fn ui_channel<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, name: &str, description: &str) {
         let mut channel_title = Line::from("Channel");
         channel_title.patch_style(STYLE_TITLE);
 
@@ -290,6 +302,18 @@ impl App {
             .title(channel_title)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .split(rect);
+
+        let name = Paragraph::new(name).style(STYLE_TITLE);
+        f.render_widget(name, chunks[1]);
+
+        let description = Paragraph::new(description).style(STYLE_AUTHOR);
+        f.render_widget(description, chunks[2]);
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
