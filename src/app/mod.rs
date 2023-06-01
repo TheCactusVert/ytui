@@ -233,7 +233,7 @@ impl App {
 
         if let Some(i) = self.result_search_selection.selected() {
             match &result_search.items[i] {
-                Video { .. } => self.ui_video(f, chunks_b[1]),
+                Video { title, author, .. } => self.ui_video(f, chunks_b[1], title, author),
                 Playlist { .. } => self.ui_playlist(f, chunks_b[1]),
                 Channel { .. } => self.ui_channel(f, chunks_b[1]),
                 Unknown { .. } => self.ui_empty(f, chunks_b[1]),
@@ -247,7 +247,7 @@ impl App {
         //self.render_image(f, chunks_c[0], include_bytes!("../../static/logo.png")).unwrap();
     }
 
-    fn ui_video<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+    fn ui_video<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, title: &str, author: &str) {
         let mut video_title = Line::from("Video");
         video_title.patch_style(STYLE_TITLE);
 
@@ -256,6 +256,22 @@ impl App {
             .title(video_title)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .split(rect);
+
+        // Top left inner block with green background
+        let block = Block::default().style(Style::default().bg(Color::Red));
+        f.render_widget(block, chunks[0]);
+
+        let title = Paragraph::new(title).style(STYLE_TITLE);
+        f.render_widget(title, chunks[1]);
+
+        let author = Paragraph::new(author).style(Style::default());
+        f.render_widget(author, chunks[2]);
     }
 
     fn ui_playlist<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
