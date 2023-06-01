@@ -16,8 +16,8 @@ use image::imageops::FilterType;
 use image::io::Reader as ImageReader;
 use image::Pixel;
 use invidious::reqwest::asynchronous::Client;
-use invidious::structs::universal::Search;
 use invidious::structs::hidden::SearchItem::*;
+use invidious::structs::universal::Search;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -236,8 +236,10 @@ impl App {
                 Video { .. } => self.ui_video(f, chunks_b[1]),
                 Playlist { .. } => self.ui_playlist(f, chunks_b[1]),
                 Channel { .. } => self.ui_channel(f, chunks_b[1]),
-                Unknown { .. } => {}
+                Unknown { .. } => self.ui_empty(f, chunks_b[1]),
             }
+        } else {
+            self.ui_empty(f, chunks_b[1]);
         }
 
         // TODO should be thumbnail
@@ -246,25 +248,41 @@ impl App {
     }
 
     fn ui_video<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let mut video_title = Line::from("Video");
+        video_title.patch_style(STYLE_TITLE);
+
         let block = Block::default()
             .borders(Borders::ALL)
-            .title("Video")
+            .title(video_title)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
     }
 
     fn ui_playlist<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let mut playlist_title = Line::from("Playlist");
+        playlist_title.patch_style(STYLE_TITLE);
+
         let block = Block::default()
             .borders(Borders::ALL)
-            .title("Playlist")
+            .title(playlist_title)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
     }
 
     fn ui_channel<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let mut channel_title = Line::from("Channel");
+        channel_title.patch_style(STYLE_TITLE);
+
         let block = Block::default()
             .borders(Borders::ALL)
-            .title("Channel")
+            .title(channel_title)
+            .border_style(self.get_border_style(State::Item));
+        f.render_widget(block, rect);
+    }
+
+    fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
+        let block = Block::default()
+            .borders(Borders::ALL)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
     }
