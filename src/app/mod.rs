@@ -1,13 +1,13 @@
+pub mod search;
 mod ui;
 mod widgets;
-pub mod search;
 
 use crate::util;
 use crate::Event;
 use crate::EventSender;
+use search::Search;
 use ui::*;
 use widgets::Image;
-use search::Search;
 
 use std::convert::AsRef;
 use std::io::Cursor;
@@ -235,8 +235,12 @@ impl App {
 
         if let Some(i) = self.result_search_selection.selected() {
             match &result_search[i] {
-                Search::Video { title, author, .. } => self.ui_video(f, chunks_b[1], &title, &author),
-                Search::Playlist { title, author, .. } => self.ui_playlist(f, chunks_b[1], &title, &author),
+                Search::Video { title, author, .. } => {
+                    self.ui_video(f, chunks_b[1], &title, &author)
+                }
+                Search::Playlist { title, author, .. } => {
+                    self.ui_playlist(f, chunks_b[1], &title, &author)
+                }
                 Search::Channel {
                     name, description, ..
                 } => self.ui_channel(f, chunks_b[1], &name, &description),
