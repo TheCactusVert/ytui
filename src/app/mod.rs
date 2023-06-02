@@ -327,14 +327,30 @@ impl App {
         let chunks_b = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
+            .constraints([Constraint::Length(16), Constraint::Min(1)].as_ref())
+            .split(chunks_a[0]);
+
+        // TODO should be thumbnail
+        // TODO this shit is slow as fuck
+        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/logo.png")))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap();
+        let thumbnail = Image::new(&thumbnail);
+        f.render_widget(thumbnail, chunks_b[0]);
+
+        let chunks_c = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
             .constraints([Constraint::Min(1), Constraint::Min(1)].as_ref())
             .split(chunks_a[1]);
 
         let name = Paragraph::new(name).style(STYLE_TITLE);
-        f.render_widget(name, chunks_b[0]);
+        f.render_widget(name, chunks_c[0]);
 
         let description = Paragraph::new(description).style(STYLE_AUTHOR);
-        f.render_widget(description, chunks_b[1]);
+        f.render_widget(description, chunks_c[1]);
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
