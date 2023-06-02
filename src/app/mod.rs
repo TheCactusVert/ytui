@@ -25,7 +25,7 @@ use ratatui::{
     text::Line,
     widgets::{
         canvas::{Canvas, Points},
-        Block, Borders, List, ListState, Paragraph,
+        Block, Borders, List, ListState, Paragraph, Wrap,
     },
     Frame,
 };
@@ -269,7 +269,6 @@ impl App {
             .split(rect);
 
         // TODO should be thumbnail
-        // TODO this shit is slow as fuck
         let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/thumbnail.jpg")))
             .with_guessed_format()
             .unwrap()
@@ -318,39 +317,26 @@ impl App {
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
 
-        let chunks_a = Layout::default()
-            .direction(Direction::Horizontal)
-            .margin(1)
-            .constraints([Constraint::Length(32), Constraint::Min(1)].as_ref())
-            .split(rect);
-
-        let chunks_b = Layout::default()
+        let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Ratio(1,1), Constraint::Min(1)].as_ref())
-            .split(chunks_a[0]);
+            .constraints([Constraint::Length(16), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .split(rect);
 
         // TODO should be thumbnail
-        // TODO this shit is slow as fuck
-        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/logo.png")))
+        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/channel.jpg")))
             .with_guessed_format()
             .unwrap()
             .decode()
             .unwrap();
         let thumbnail = Image::new(&thumbnail);
-        f.render_widget(thumbnail, chunks_b[0]);
-
-        let chunks_c = Layout::default()
-            .direction(Direction::Vertical)
-            .margin(1)
-            .constraints([Constraint::Min(1), Constraint::Min(1)].as_ref())
-            .split(chunks_a[1]);
+        f.render_widget(thumbnail, chunks[0]);
 
         let name = Paragraph::new(name).style(STYLE_TITLE);
-        f.render_widget(name, chunks_c[0]);
+        f.render_widget(name, chunks[1]);
 
-        let description = Paragraph::new(description).style(STYLE_AUTHOR);
-        f.render_widget(description, chunks_c[1]);
+        let description = Paragraph::new(description).style(STYLE_AUTHOR).wrap(Wrap { trim: true });
+        f.render_widget(description, chunks[2]);
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
@@ -400,8 +386,9 @@ impl App {
             _ = token.cancelled() => return,
         };
 
-        if let Ok(s) = result {
-            *result_search.lock().unwrap() = s;
+         match result {
+            Ok(r) => { *result_search.lock().unwrap() = r; },
+            Err(_) => return,
         }
 
         event_tx.send(Event::Fetch).unwrap();
