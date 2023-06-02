@@ -1929,6 +1929,7 @@ dependencies = [
  "image",
  "invidious",
  "ratatui",
+ "reqwest",
  "tokio",
  "tokio-util",
  "unicode-width",

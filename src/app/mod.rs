@@ -320,7 +320,14 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Length(16), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .constraints(
+                [
+                    Constraint::Length(16),
+                    Constraint::Min(1),
+                    Constraint::Min(1),
+                ]
+                .as_ref(),
+            )
             .split(rect);
 
         // TODO should be thumbnail
@@ -335,7 +342,9 @@ impl App {
         let name = Paragraph::new(name).style(STYLE_TITLE);
         f.render_widget(name, chunks[1]);
 
-        let description = Paragraph::new(description).style(STYLE_AUTHOR).wrap(Wrap { trim: true });
+        let description = Paragraph::new(description)
+            .style(STYLE_AUTHOR)
+            .wrap(Wrap { trim: true });
         f.render_widget(description, chunks[2]);
     }
 
@@ -386,10 +395,12 @@ impl App {
             _ = token.cancelled() => return,
         };
 
-         match result {
-            Ok(r) => { *result_search.lock().unwrap() = r; },
+        let result = match result {
+            Ok(r) => r,
             Err(_) => return,
-        }
+        };
+
+        *result_search.lock().unwrap() = result;
 
         event_tx.send(Event::Fetch).unwrap();
     }
