@@ -216,7 +216,7 @@ impl App {
 
         let chunks_b = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(chunks_a[1]);
 
         let result_search = self.result_search.lock().unwrap();
@@ -260,7 +260,7 @@ impl App {
             .margin(1)
             .constraints(
                 [
-                    Constraint::Percentage(50),
+                    Constraint::Ratio(9, 16),
                     Constraint::Min(1),
                     Constraint::Min(1),
                 ]
@@ -270,7 +270,7 @@ impl App {
 
         // TODO should be thumbnail
         // TODO this shit is slow as fuck
-        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/logo.png")))
+        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/thumbnail.jpg")))
             .with_guessed_format()
             .unwrap()
             .decode()
@@ -327,7 +327,7 @@ impl App {
         let chunks_b = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Length(16), Constraint::Min(1)].as_ref())
+            .constraints([Constraint::Ratio(1,1), Constraint::Min(1)].as_ref())
             .split(chunks_a[0]);
 
         // TODO should be thumbnail

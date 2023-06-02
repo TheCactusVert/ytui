@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.71"
 clap = { version = "4.3.0", features = ["derive", "cargo"] }
 crossterm = "0.26.1"
-image =  { version = "0.24.6", features = ["png"] }
+image =  { version = "0.24.6", features = ["png", "jpeg"] }
 invidious = { version = "0.4.1", features = ["reqwest"] }
 ratatui = "0.21.0"
 tokio = { version = "1.28.2", features = ["rt-multi-thread", "macros"] }
