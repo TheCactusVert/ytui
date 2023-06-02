@@ -1,9 +1,11 @@
 mod ui;
+mod widgets;
 
 use crate::util;
 use crate::Event;
 use crate::EventSender;
 use ui::*;
+use widgets::Image;
 
 use std::convert::AsRef;
 use std::io::Cursor;
@@ -12,9 +14,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
-use image::imageops::FilterType;
 use image::io::Reader as ImageReader;
-use image::Pixel;
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::*;
 use invidious::structs::universal::Search;
@@ -235,7 +235,9 @@ impl App {
             match &result_search.items[i] {
                 Video { title, author, .. } => self.ui_video(f, chunks_b[1], title, author),
                 Playlist { title, author, .. } => self.ui_playlist(f, chunks_b[1], title, author),
-                Channel { name, description, .. } => self.ui_channel(f, chunks_b[1], name, description),
+                Channel {
+                    name, description, ..
+                } => self.ui_channel(f, chunks_b[1], name, description),
                 Unknown { .. } => self.ui_empty(f, chunks_b[1]),
             }
         } else {
@@ -256,12 +258,25 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Percentage(50), Constraint::Min(1), Constraint::Min(1)].as_ref())
+            .constraints(
+                [
+                    Constraint::Percentage(50),
+                    Constraint::Min(1),
+                    Constraint::Min(1),
+                ]
+                .as_ref(),
+            )
             .split(rect);
-        
+
         // TODO should be thumbnail
         // TODO this shit is slow as fuck
-        //self.render_image(f, chunks[0], include_bytes!("../../static/logo.png")).unwrap();
+        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/logo.png")))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap();
+        let thumbnail = Image::new(&thumbnail);
+        f.render_widget(thumbnail, chunks[0]);
 
         let title = Paragraph::new(title).style(STYLE_TITLE);
         f.render_widget(title, chunks[1]);
@@ -327,42 +342,6 @@ impl App {
             .borders(Borders::ALL)
             .border_style(self.get_border_style(State::Item));
         f.render_widget(block, rect);
-    }
-
-    fn render_image<B: Backend, T: AsRef<[u8]>>(
-        &self,
-        f: &mut Frame<B>,
-        rect: Rect,
-        data: T,
-    ) -> Result<()> {
-        let img = ImageReader::new(Cursor::new(data))
-            .with_guessed_format()?
-            .decode()?
-            .resize_exact(rect.width.into(), rect.height.into(), FilterType::Nearest)
-            .to_rgb8();
-
-        assert!(rect.width as u32 == img.width());
-        assert!(rect.height as u32 == img.height());
-
-        let canvas = Canvas::default()
-            .x_bounds([0.0, (img.width() - 1) as f64])
-            .y_bounds([0.0, (img.height() - 1) as f64])
-            .paint(|p| {
-                for x in 0..img.width() {
-                    for y in 0..img.height() {
-                        let pixel = img.get_pixel(x, y);
-                        let rgb = pixel.to_rgb();
-                        p.draw(&Points {
-                            coords: &[(x as f64, y as f64)],
-                            color: Color::Rgb(rgb.0[0], rgb.0[1], rgb.0[2]),
-                        })
-                    }
-                }
-            });
-
-        f.render_widget(canvas, rect);
-
-        Ok(())
     }
 
     fn start_search(&mut self, search: String) {
