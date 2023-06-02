@@ -1,5 +1,6 @@
 mod ui;
 mod widgets;
+mod search;
 
 use crate::util;
 use crate::Event;
