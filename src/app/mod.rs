@@ -1,12 +1,13 @@
 mod ui;
 mod widgets;
-mod search;
+pub mod search;
 
 use crate::util;
 use crate::Event;
 use crate::EventSender;
 use ui::*;
 use widgets::Image;
+use search::Search;
 
 use std::convert::AsRef;
 use std::io::Cursor;
@@ -18,7 +19,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
 use invidious::reqwest::asynchronous::Client;
 use invidious::structs::hidden::SearchItem::*;
-use invidious::structs::universal::Search;
+use invidious::structs::universal::Search as InvidiousSearch;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -37,7 +38,7 @@ use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
 use which::which;
 
-type SharedSearch = Arc<Mutex<Search>>;
+type SharedSearch = Arc<Mutex<Vec<Search>>>;
 
 #[derive(PartialEq, Default, Debug)]
 enum State {
@@ -65,7 +66,7 @@ impl App {
             rt: Runtime::new().unwrap(),
             event_tx,
             search: String::default(),
-            result_search: Arc::new(Mutex::new(Search { items: Vec::new() })),
+            result_search: Arc::new(Mutex::new(Vec::new())),
             result_search_selection: ListState::default(),
             searcher: None,
         }
@@ -74,12 +75,12 @@ impl App {
     fn next_video(&mut self) {
         let result_search = self.result_search.lock().unwrap();
 
-        if result_search.items.len() != 0 {
+        if result_search.len() != 0 {
             let i = match self.result_search_selection.selected() {
-                Some(i) if i == result_search.items.len() - 1 => result_search.items.len() - 1,
+                Some(i) if i == result_search.len() - 1 => result_search.len() - 1,
                 Some(mut i) => {
                     i += 1;
-                    i %= result_search.items.len();
+                    i %= result_search.len();
                     i
                 }
                 None => 0,
@@ -93,15 +94,15 @@ impl App {
     fn previous_video(&mut self) {
         let result_search = self.result_search.lock().unwrap();
 
-        if result_search.items.len() != 0 {
+        if result_search.len() != 0 {
             let i = match self.result_search_selection.selected() {
                 Some(i) if i == 0 => 0,
                 Some(mut i) => {
                     i -= 1;
-                    i %= result_search.items.len();
+                    i %= result_search.len();
                     i
                 }
-                None => result_search.items.len() - 1,
+                None => result_search.len() - 1,
             };
             self.result_search_selection.select(Some(i));
         } else {
@@ -233,13 +234,13 @@ impl App {
         f.render_stateful_widget(result_list, chunks_b[0], &mut self.result_search_selection);
 
         if let Some(i) = self.result_search_selection.selected() {
-            match &result_search.items[i] {
-                Video { title, author, .. } => self.ui_video(f, chunks_b[1], title, author),
-                Playlist { title, author, .. } => self.ui_playlist(f, chunks_b[1], title, author),
-                Channel {
+            match &result_search[i] {
+                Search::Video { title, author, .. } => self.ui_video(f, chunks_b[1], &title, &author),
+                Search::Playlist { title, author, .. } => self.ui_playlist(f, chunks_b[1], &title, &author),
+                Search::Channel {
                     name, description, ..
-                } => self.ui_channel(f, chunks_b[1], name, description),
-                Unknown { .. } => self.ui_empty(f, chunks_b[1]),
+                } => self.ui_channel(f, chunks_b[1], &name, &description),
+                Search::Unknown { .. } => self.ui_empty(f, chunks_b[1]),
             }
         } else {
             self.ui_empty(f, chunks_b[1]);
@@ -377,7 +378,7 @@ impl App {
         }
 
         let mut result_search = self.result_search.lock().unwrap();
-        result_search.items.clear();
+        result_search.clear();
         self.result_search_selection.select(None);
     }
 
@@ -400,6 +401,8 @@ impl App {
             Ok(r) => r,
             Err(_) => return,
         };
+
+        let result: Vec<Search> = result.items.into_iter().map(|i| i.into()).collect();
 
         *result_search.lock().unwrap() = result;
 

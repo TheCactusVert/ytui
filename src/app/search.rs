@@ -19,6 +19,7 @@ pub enum Search {
     },
     Channel {
         name: String,
+        description: String,
         thumbnail: Option<Thumbnail>,
     },
     Unknown(SearchItemTransition)
@@ -29,8 +30,9 @@ impl From<SearchItem> for Search {
         match item {
             SearchItem::Video { title, author, thumbnails, .. } => Search::Video { title, author, thumbnail: thumbnails.first().and_then(|t| Some(Thumbnail::Link(t.url.clone()))) },
             SearchItem::Playlist { title, author, thumbnail, .. } => Search::Playlist { title, author, thumbnail: Some(Thumbnail::Link(thumbnail)) },
-            SearchItem::Channel { name, thumbnails, .. } => Search::Channel { name, thumbnail: thumbnails.first().and_then(|t| Some(Thumbnail::Link(t.url.clone()))) },
+            SearchItem::Channel { name, description, thumbnails, .. } => Search::Channel { name, description, thumbnail: thumbnails.first().and_then(|t| Some(Thumbnail::Link(t.url.clone()))) },
             SearchItem::Unknown(s) => Search::Unknown(s),
         }
     }
 }
+
