@@ -2,7 +2,6 @@ pub mod search;
 mod ui;
 mod widgets;
 
-use crate::util;
 use crate::Event;
 use crate::EventSender;
 use search::Search;
@@ -27,7 +26,7 @@ use ratatui::{
     text::Line,
     widgets::{
         canvas::{Canvas, Points},
-        Block, Borders, List, ListState, Paragraph, Wrap,
+        Block, Borders, List, ListState, ListItem, Paragraph, Wrap,
     },
     Frame,
 };
@@ -222,7 +221,10 @@ impl App {
             .split(chunks_a[1]);
 
         let result_search = self.result_search.lock().unwrap();
-        let result_items = util::search_to_list_items(&result_search);
+        let result_items: Vec<ListItem> = result_search
+            .iter()
+            .map(|v| v.into_list_item().style(Style::default()))
+            .collect();
         let result_list = List::new(result_items)
             .block(
                 Block::default()

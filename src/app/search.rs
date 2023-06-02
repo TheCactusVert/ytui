@@ -26,7 +26,7 @@ pub enum Search {
     Unknown(SearchItemTransition),
 }
 
-impl<'a>  Search {
+impl<'a> Search {
     pub fn into_list_item(&'a self) -> ListItem<'a> {
         ListItem::new(match self {
             Search::Video { title, .. } => title.as_str(),
