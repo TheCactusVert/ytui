@@ -52,7 +52,7 @@ pub struct App {
     state: State,
     rt: Runtime,
     event_tx: EventSender,
-    search: String,
+    input: String,
     result_search: SharedSearch,
     result_search_selection: ListState,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
@@ -64,7 +64,7 @@ impl App {
             state: State::default(),
             rt: Runtime::new().unwrap(),
             event_tx,
-            search: String::default(),
+            input: String::default(),
             result_search: Arc::new(Mutex::new(Vec::new())),
             result_search_selection: ListState::default(),
             searcher: None,
@@ -112,10 +112,10 @@ impl App {
     fn handle_event_search(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char(c) => {
-                self.search.push(c);
+                self.input.push(c);
             }
             KeyCode::Backspace => {
-                self.search.pop();
+                self.input.pop();
             }
             KeyCode::Esc => {
                 self.state = State::List;
@@ -123,7 +123,7 @@ impl App {
             KeyCode::Enter => {
                 self.state = State::List;
                 self.stop_search();
-                self.start_search(self.search.clone());
+                self.start_search(self.input.clone());
             }
             _ => {}
         }
@@ -201,7 +201,7 @@ impl App {
             .constraints([Constraint::Length(3), Constraint::Min(5)].as_ref())
             .split(f.size());
 
-        let search_paragraph = Paragraph::new(self.search.as_str()).block(
+        let search_paragraph = Paragraph::new(self.input.as_str()).block(
             Block::default()
                 .borders(Borders::ALL)
                 .title(search_title)
@@ -210,7 +210,7 @@ impl App {
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
             f.set_cursor(
-                chunks_a[0].x + self.search.width() as u16 + 1,
+                chunks_a[0].x + self.input.width() as u16 + 1,
                 chunks_a[0].y + 1,
             );
         }
