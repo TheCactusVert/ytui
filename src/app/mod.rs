@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
+use image::DynamicImage;
 use invidious::hidden::SearchItem::{self, *};
 use invidious::ClientAsync as Client;
 use invidious::MethodAsync;
@@ -104,7 +105,7 @@ impl App {
             KeyCode::Enter => {
                 let search = self.search.lock().unwrap();
                 match search.selected_item() {
-                    Some(Video { id, .. }) => {
+                    Some((Video { id, .. }, _)) => {
                         self.player.play_video(id);
                     }
                     _ => {}
@@ -205,21 +206,35 @@ impl App {
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(result_list, chunks_b[0], &mut list_split.1);
 
-        if let Some(item) = search.selected_item() {
-            match item {
-                Video { title, author, .. } => self.ui_video(f, chunks_b[1], &title, &author),
-                Playlist { title, author, .. } => self.ui_playlist(f, chunks_b[1], &title, &author),
+        match search.selected_item() {
+            Some((Video { title, author, .. }, thumbnail)) => {
+                self.ui_video(f, chunks_b[1], &title, &author, thumbnail);
+            }
+            Some((Playlist { title, author, .. }, thumbnail)) => {
+                self.ui_playlist(f, chunks_b[1], &title, &author);
+            }
+            Some((
                 Channel {
                     name, description, ..
-                } => self.ui_channel(f, chunks_b[1], &name, &description),
-                Unknown(..) => self.ui_empty(f, chunks_b[1]),
+                },
+                thumbnail,
+            )) => {
+                self.ui_channel(f, chunks_b[1], &name, &description);
             }
-        } else {
-            self.ui_empty(f, chunks_b[1]);
+            _ => {
+                self.ui_empty(f, chunks_b[1]);
+            }
         }
     }
 
-    fn ui_video<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, title: &str, author: &str) {
+    fn ui_video<B: Backend>(
+        &self,
+        f: &mut Frame<B>,
+        rect: Rect,
+        title: &str,
+        author: &str,
+        thumbnail: &Option<DynamicImage>,
+    ) {
         let mut video_title = Line::from("Video");
         video_title.patch_style(STYLE_TITLE);
 
@@ -242,14 +257,10 @@ impl App {
             )
             .split(rect);
 
-        // TODO should be thumbnail
-        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/thumbnail.jpg")))
-            .with_guessed_format()
-            .unwrap()
-            .decode()
-            .unwrap();
-        let thumbnail = Image::new(&thumbnail);
-        f.render_widget(thumbnail, chunks[0]);
+        if let Some(thumbnail) = thumbnail {
+            let thumbnail = Image::new(&thumbnail);
+            f.render_widget(thumbnail, chunks[0]);
+        }
 
         let title = Paragraph::new(title).style(STYLE_TITLE);
         f.render_widget(title, chunks[1]);
@@ -363,30 +374,51 @@ impl App {
         token: CancellationToken,
         input: String,
     ) {
-        let items = select! {
-            s = Self::fetch_search(event_tx, search, input) => s,
+        select! {
+            s = Self::fetch_search(event_tx.clone(), search.clone(), input) => s,
             _ = token.cancelled() => return,
         };
-        //Self::fetch_thumbnails(event_tx, search, items);
+
+        select! {
+            s = Self::fetch_thumbnails(event_tx, search) => s,
+            _ = token.cancelled() => return,
+        };
     }
 
     async fn fetch_search(
         event_tx: EventSender,
         search: SharedSearch,
         input: String,
-    ) -> Result<Vec<SearchItem>, Box<dyn Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         let client = Client::new(String::from(invidious::INSTANCE), MethodAsync::ReqwestAsync);
         let input = format!("q={input}");
         let items = client.search(Some(&input)).await?.items;
 
         let mut search = search.lock().unwrap();
-        *search = Search::from_items(items.clone());
+        *search = items.into();
 
         event_tx.send(Event::Fetch).unwrap();
 
-        Ok(items)
+        Ok(())
     }
 
-    async fn fetch_thumbnails(event_tx: EventSender, search: SharedSearch, items: Vec<SearchItem>) {
+    async fn fetch_thumbnails(
+        event_tx: EventSender,
+        search: SharedSearch,
+    ) -> Result<(), Box<dyn Error>> {
+        let response = reqwest::get("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg").await?;
+
+        let thumbnail = ImageReader::new(Cursor::new(response.bytes().await?.as_ref()))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let mut search = search.lock().unwrap();
+        search.set_thumbnail(0, thumbnail);
+
+        event_tx.send(Event::Fetch).unwrap();
+
+        Ok(())
     }
 }
