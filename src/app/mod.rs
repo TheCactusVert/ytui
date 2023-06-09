@@ -11,13 +11,14 @@ use ui::*;
 use widgets::Image;
 
 use std::convert::AsRef;
+use std::error::Error;
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
-use invidious::hidden::SearchItem::*;
+use invidious::hidden::SearchItem::{self, *};
 use invidious::ClientAsync as Client;
 use invidious::MethodAsync;
 use ratatui::{
@@ -362,23 +363,30 @@ impl App {
         token: CancellationToken,
         input: String,
     ) {
-        let client = Client::new(String::from(invidious::INSTANCE), MethodAsync::ReqwestAsync);
-        let input = format!("q={input}");
-        let fetch = client.search(Some(&input));
-
-        let result = select! {
-            s = fetch => s,
+        let items = select! {
+            s = Self::fetch_search(event_tx, search, input) => s,
             _ = token.cancelled() => return,
         };
+        //Self::fetch_thumbnails(event_tx, search, items);
+    }
 
-        let items = match result {
-            Ok(i) => i,
-            Err(_) => return,
-        };
+    async fn fetch_search(
+        event_tx: EventSender,
+        search: SharedSearch,
+        input: String,
+    ) -> Result<Vec<SearchItem>, Box<dyn Error>> {
+        let client = Client::new(String::from(invidious::INSTANCE), MethodAsync::ReqwestAsync);
+        let input = format!("q={input}");
+        let items = client.search(Some(&input)).await?.items;
 
         let mut search = search.lock().unwrap();
-        *search = Search::from_items(items.items);
+        *search = Search::from_items(items.clone());
 
         event_tx.send(Event::Fetch).unwrap();
+
+        Ok(items)
+    }
+
+    async fn fetch_thumbnails(event_tx: EventSender, search: SharedSearch, items: Vec<SearchItem>) {
     }
 }

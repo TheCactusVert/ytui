@@ -1,7 +1,7 @@
 use invidious::hidden::SearchItem::{self, *};
 use ratatui::widgets::{ListItem, ListState};
 
-type Items =  Vec<SearchItem>;
+type Items = Vec<SearchItem>;
 
 #[derive(Default)]
 pub struct Search {
@@ -69,8 +69,6 @@ impl Search {
     }
 
     pub fn selected_item(&self) -> Option<&SearchItem> {
-        self.selection
-            .selected()
-            .and_then(|i| Some(&self.items[i]))
+        self.selection.selected().and_then(|i| Some(&self.items[i]))
     }
 }
