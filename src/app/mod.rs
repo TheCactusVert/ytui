@@ -392,6 +392,7 @@ impl App {
     async fn fetch_thumbnail(event_tx: EventSender, i: usize, item: SearchItem) -> Result<(), Box<dyn Error>> {
         let url = match item {
             Video { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),
+            Channel { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),
             _ => None,   
         };
         
