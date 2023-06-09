@@ -12,7 +12,6 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::process::Stdio;
 
-use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
 use invidious::reqwest::asynchronous::Client;
@@ -21,10 +20,9 @@ use invidious::structs::universal::Search;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style:: Style,
     text::Line,
     widgets::{
-        canvas::{Canvas, Points},
         Block, Borders, List, ListItem, ListState, Paragraph, Wrap,
     },
     Frame,

@@ -1,18 +1,13 @@
-use std::io::Read;
-
 use image::imageops::FilterType;
-use image::io::Reader as ImageReader;
 use image::DynamicImage;
 use image::GenericImageView;
 use image::Pixel;
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
     text::Span,
     widgets::Widget,
-    Frame, Terminal,
 };
 
 pub struct Image<'a> {
