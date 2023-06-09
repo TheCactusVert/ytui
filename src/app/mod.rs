@@ -10,18 +10,18 @@ use widgets::Image;
 
 use std::convert::AsRef;
 use std::io::Cursor;
-use std::process::Command;
-use std::process::Stdio;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
-use invidious::ClientAsync as Client;
 use invidious::hidden::SearchItem::*;
+use invidious::ClientAsync as Client;
 use invidious::MethodAsync;
 use ratatui::{
-    layout::Alignment,
     backend::Backend,
+    layout::Alignment,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::Line,
@@ -43,27 +43,30 @@ enum State {
     List,
     Search,
     Item,
-    Exit,
 }
 
 pub struct App {
+    running: bool,
     state: State,
     rt: Runtime,
     event_tx: EventSender,
     input: String,
     search: SharedSearch,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
+    player: Option<PathBuf>,
 }
 
 impl App {
     pub fn new(event_tx: EventSender) -> Self {
         Self {
+            running: true,
             state: State::default(),
             rt: Runtime::new().unwrap(),
             event_tx,
             input: String::default(),
             search: SharedSearch::default(),
             searcher: None,
+            player: which("celluloid").or_else(|_| which("mpv")).ok(), // TODO
         }
     }
 
@@ -90,30 +93,27 @@ impl App {
     fn handle_event_list(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
-                self.state = State::Exit;
+                self.running = false;
                 self.stop_search();
             }
             KeyCode::Char('/') => {
                 self.state = State::Search;
             }
-            KeyCode::Enter => match which("celluloid").or_else(|_| which("mpv")) {
-                Ok(p) => {
+            KeyCode::Enter => {
+                if let Some(player) = &self.player {
                     let search = self.search.lock().unwrap();
-                    if let Some(item) = search.selected_item() {
-                        match item {
-                            Video { id, .. } => {
-                                Command::new(p)
-                                    .arg(format!("https://www.youtube.com/watch?v={id}"))
-                                    .stderr(Stdio::null())
-                                    .stdout(Stdio::null())
-                                    .spawn();
-                            }
-                            _ => {}
+                    match search.selected_item() {
+                        Some(Video { id, .. }) => {
+                            Command::new(player)
+                                .arg(format!("https://www.youtube.com/watch?v={id}"))
+                                .stderr(Stdio::null())
+                                .stdout(Stdio::null())
+                                .spawn();
                         }
+                        _ => {}
                     }
                 }
-                Err(e) => {}
-            },
+            }
             KeyCode::Char('k') | KeyCode::Up => {
                 let mut search = self.search.lock().unwrap();
                 search.previous_video();
@@ -132,7 +132,7 @@ impl App {
     fn handle_event_item(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Esc => {
-                self.state = State::Exit;
+                self.running = false;
                 self.stop_search();
             }
             KeyCode::Char('/') => {
@@ -146,7 +146,7 @@ impl App {
     }
 
     pub fn is_running(&self) -> bool {
-        self.state != State::Exit
+        self.running
     }
 
     pub fn handle_key_event(&mut self, key: KeyEvent) {
@@ -155,7 +155,6 @@ impl App {
                 State::List => self.handle_event_list(key.code),
                 State::Search => self.handle_event_search(key.code),
                 State::Item => self.handle_event_item(key.code),
-                _ => {}
             }
         }
     }
@@ -328,11 +327,6 @@ impl App {
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
-        /*let block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(self.get_border_style(State::Item));
-        f.render_widget(block, rect);*/
-        
         let help = Paragraph::new("Hello World!")
             .alignment(Alignment::Center)
             .block(

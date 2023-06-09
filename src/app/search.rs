@@ -25,19 +25,21 @@ impl Search {
     }
 
     pub fn get_list_split<'a>(&'a mut self) -> (Vec<ListItem<'a>>, &'a mut ListState) {
-        (self.items
-            .items
-            .iter()
-            .map(|item| {
-                ListItem::new(match item {
-                    Video { title, .. } => title.as_str(),
-                    Playlist { title, .. } => title.as_str(),
-                    Channel { name, .. } => name.as_str(),
-                    Unknown(_) => "Error",
+        (
+            self.items
+                .items
+                .iter()
+                .map(|item| {
+                    ListItem::new(match item {
+                        Video { title, .. } => title.as_str(),
+                        Playlist { title, .. } => title.as_str(),
+                        Channel { name, .. } => name.as_str(),
+                        Unknown(_) => "Error",
+                    })
                 })
-            })
-            .collect(),
-        &mut self.selection)
+                .collect(),
+            &mut self.selection,
+        )
     }
 
     pub fn next_video(&mut self) {
@@ -75,6 +77,8 @@ impl Search {
     }
 
     pub fn selected_item(&self) -> Option<&SearchItem> {
-        self.selection.selected().and_then(|i| Some(&self.items.items[i]))
+        self.selection
+            .selected()
+            .and_then(|i| Some(&self.items.items[i]))
     }
 }
