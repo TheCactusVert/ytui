@@ -1,5 +1,5 @@
-use invidious::structs::hidden::SearchItem::{self, *};
-use invidious::structs::universal::Search as Items;
+use invidious::hidden::SearchItem::{self, *};
+use invidious::universal::Search as Items;
 use ratatui::widgets::{ListItem, ListState};
 
 pub struct Search {

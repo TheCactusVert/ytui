@@ -16,14 +16,15 @@ use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
-use invidious::reqwest::asynchronous::Client;
-use invidious::structs::hidden::SearchItem::*;
+use invidious::ClientAsync as Client;
+use invidious::hidden::SearchItem::*;
+use invidious::MethodAsync;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::Line,
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, List, Paragraph, Wrap},
     Frame,
 };
 use tokio::runtime::Runtime;
@@ -362,7 +363,7 @@ impl App {
         token: CancellationToken,
         input: String,
     ) {
-        let client = Client::new(String::from("https://vid.puffyan.us"));
+        let client = Client::new(String::from(invidious::INSTANCE), MethodAsync::ReqwestAsync);
         let input = format!("q={input}");
         let fetch = client.search(Some(&input));
 
