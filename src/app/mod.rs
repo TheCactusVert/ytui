@@ -365,12 +365,12 @@ impl App {
 
     async fn run_search(event_tx: EventSender, token: CancellationToken, input: String) {
         select! {
-            s = Self::fetch_search(event_tx.clone(), input) => s,
+            _ = Self::fetch_search(event_tx.clone(), input) => {},
             _ = token.cancelled() => return,
         };
 
         select! {
-            s = Self::fetch_thumbnails(event_tx, String::from("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg")) => s,
+            _ = Self::fetch_thumbnails(event_tx, String::from("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg")) => {},
             _ = token.cancelled() => return,
         };
     }
