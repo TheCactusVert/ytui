@@ -1,5 +1,5 @@
 mod player;
-mod search;
+pub mod search;
 mod ui;
 mod widgets;
 
@@ -38,8 +38,6 @@ use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
 use which::which;
 
-type SharedSearch = Arc<Mutex<Search>>;
-
 #[derive(PartialEq, Default, Debug)]
 enum State {
     #[default]
@@ -54,7 +52,7 @@ pub struct App {
     rt: Runtime,
     event_tx: EventSender,
     input: String,
-    search: SharedSearch,
+    search: Search,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
     player: Player,
 }
@@ -67,9 +65,9 @@ impl App {
             rt: Runtime::new().unwrap(),
             event_tx,
             input: String::default(),
-            search: SharedSearch::default(),
+            search: Search::default(),
             searcher: None,
-            player: Player::new(), // TODO
+            player: Player::new(),
         }
     }
 
@@ -102,22 +100,17 @@ impl App {
             KeyCode::Char('/') => {
                 self.state = State::Search;
             }
-            KeyCode::Enter => {
-                let search = self.search.lock().unwrap();
-                match search.selected_item() {
-                    Some((Video { id, .. }, _)) => {
-                        self.player.play_video(id);
-                    }
-                    _ => {}
+            KeyCode::Enter => match self.search.selected_item() {
+                Some((Video { id, .. }, _)) => {
+                    self.player.play_video(id);
                 }
-            }
+                _ => {}
+            },
             KeyCode::Char('k') | KeyCode::Up => {
-                let mut search = self.search.lock().unwrap();
-                search.previous_video();
+                self.search.previous_video();
             }
             KeyCode::Char('j') | KeyCode::Down => {
-                let mut search = self.search.lock().unwrap();
-                search.next_video();
+                self.search.next_video();
             }
             KeyCode::Tab => {
                 self.state = State::Item;
@@ -154,6 +147,10 @@ impl App {
                 State::Item => self.handle_event_item(key.code),
             }
         }
+    }
+
+    pub fn handle_fetch_event(&mut self, search: Search) {
+        self.search = search;
     }
 
     fn get_border_style(&self, state: State) -> Style {
@@ -194,19 +191,19 @@ impl App {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(chunks_a[1]);
 
-        let mut search = self.search.lock().unwrap();
-        let mut list_split = search.get_list_split();
+        let border = self.get_border_style(State::List);
+        let mut list_split = self.search.get_list_split();
         let result_list = List::new(list_split.0)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .title(result_title)
-                    .border_style(self.get_border_style(State::List)),
+                    .border_style(border),
             )
             .highlight_style(STYLE_HIGHLIGHT_ITEM);
         f.render_stateful_widget(result_list, chunks_b[0], &mut list_split.1);
 
-        match search.selected_item() {
+        match self.search.selected_item() {
             Some((Video { title, author, .. }, thumbnail)) => {
                 self.ui_video(f, chunks_b[1], &title, &author, thumbnail);
             }
@@ -350,7 +347,6 @@ impl App {
         let token = CancellationToken::new();
         let join = self.rt.spawn(Self::run_search(
             self.event_tx.clone(),
-            self.search.clone(),
             token.clone(),
             input,
         ));
@@ -364,58 +360,41 @@ impl App {
             self.rt.block_on(&mut thread.1).unwrap();
         }
 
-        let mut search = self.search.lock().unwrap();
-        *search = Search::default();
+        self.search = Search::default();
     }
 
-    async fn run_search(
-        event_tx: EventSender,
-        search: SharedSearch,
-        token: CancellationToken,
-        input: String,
-    ) {
+    async fn run_search(event_tx: EventSender, token: CancellationToken, input: String) {
         select! {
-            s = Self::fetch_search(event_tx.clone(), search.clone(), input) => s,
+            s = Self::fetch_search(event_tx.clone(), input) => s,
             _ = token.cancelled() => return,
         };
 
         select! {
-            s = Self::fetch_thumbnails(event_tx, search) => s,
+            s = Self::fetch_thumbnails(event_tx) => s,
             _ = token.cancelled() => return,
         };
     }
 
-    async fn fetch_search(
-        event_tx: EventSender,
-        search: SharedSearch,
-        input: String,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn fetch_search(event_tx: EventSender, input: String) -> Result<(), Box<dyn Error>> {
         let client = Client::new(String::from(invidious::INSTANCE), MethodAsync::ReqwestAsync);
         let input = format!("q={input}");
         let items = client.search(Some(&input)).await?.items;
 
-        let mut search = search.lock().unwrap();
-        *search = items.into();
-
-        event_tx.send(Event::Fetch).unwrap();
+        event_tx.send(Event::Fetch(items.into())).unwrap();
 
         Ok(())
     }
 
-    async fn fetch_thumbnails(
-        event_tx: EventSender,
-        search: SharedSearch,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn fetch_thumbnails(event_tx: EventSender) -> Result<(), Box<dyn Error>> {
         let response = reqwest::get("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg").await?;
 
         let thumbnail = ImageReader::new(Cursor::new(response.bytes().await?.as_ref()))
             .with_guessed_format()?
             .decode()?;
 
-        let mut search = search.lock().unwrap();
-        search.set_thumbnail(0, thumbnail);
+        /*search.set_thumbnail(0, thumbnail);
 
-        event_tx.send(Event::Fetch).unwrap();
+        event_tx.send(Event::Fetch).unwrap();*/
 
         Ok(())
     }

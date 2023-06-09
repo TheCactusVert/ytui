@@ -55,6 +55,7 @@ fn main() -> Result<()> {
         match rx.recv() {
             Ok(event) => match event {
                 Event::Key(key) => app.handle_key_event(key),
+                Event::Fetch(search) => app.handle_fetch_event(search),
                 _ => {}
             },
             Err(e) => {}

@@ -1,3 +1,5 @@
+use crate::app::search::Search;
+
 use crossterm::event::{KeyEvent, MouseEvent};
 
 pub enum Event {
@@ -7,7 +9,7 @@ pub enum Event {
     Mouse(MouseEvent),
     Paste(String),
     Resize(u16, u16),
-    Fetch,
+    Fetch(Search),
 }
 
 impl From<crossterm::event::Event> for Event {
