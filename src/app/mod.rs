@@ -20,6 +20,7 @@ use invidious::ClientAsync as Client;
 use invidious::hidden::SearchItem::*;
 use invidious::MethodAsync;
 use ratatui::{
+    layout::Alignment,
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
@@ -327,10 +328,19 @@ impl App {
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
-        let block = Block::default()
+        /*let block = Block::default()
             .borders(Borders::ALL)
             .border_style(self.get_border_style(State::Item));
-        f.render_widget(block, rect);
+        f.render_widget(block, rect);*/
+        
+        let help = Paragraph::new("Hello World!")
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(self.get_border_style(State::Item)),
+            );
+        f.render_widget(help, rect);
     }
 
     fn start_search(&mut self, input: String) {
