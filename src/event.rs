@@ -11,7 +11,7 @@ pub enum Event {
     Paste(String),
     Resize(u16, u16),
     Fetch(Search),
-    Thumbnail(DynamicImage),
+    Thumbnail(usize, DynamicImage),
 }
 
 impl From<crossterm::event::Event> for Event {

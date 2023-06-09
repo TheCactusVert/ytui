@@ -56,6 +56,7 @@ fn main() -> Result<()> {
             Ok(event) => match event {
                 Event::Key(key) => app.handle_key_event(key),
                 Event::Fetch(search) => app.handle_fetch_event(search),
+                Event::Thumbnail(i, thumbnail) => app.handle_thumbnail_event(i, thumbnail),
                 _ => {}
             },
             Err(e) => {}

@@ -153,6 +153,10 @@ impl App {
         self.search = search;
     }
 
+    pub fn handle_thumbnail_event(&mut self, i: usize, thumbnail: DynamicImage) {
+        self.search.set_thumbnail(i, thumbnail);
+    }
+
     fn get_border_style(&self, state: State) -> Style {
         if self.state == state {
             STYLE_HIGHLIGHT
