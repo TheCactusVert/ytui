@@ -1,6 +1,7 @@
 use crate::app::search::Search;
 
 use crossterm::event::{KeyEvent, MouseEvent};
+use image::DynamicImage;
 
 pub enum Event {
     FocusGained,
@@ -10,6 +11,7 @@ pub enum Event {
     Paste(String),
     Resize(u16, u16),
     Fetch(Search),
+    Thumbnail(DynamicImage),
 }
 
 impl From<crossterm::event::Event> for Event {

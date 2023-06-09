@@ -370,7 +370,7 @@ impl App {
         };
 
         select! {
-            s = Self::fetch_thumbnails(event_tx) => s,
+            s = Self::fetch_thumbnails(event_tx, String::from("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg")) => s,
             _ = token.cancelled() => return,
         };
     }
@@ -385,8 +385,8 @@ impl App {
         Ok(())
     }
 
-    async fn fetch_thumbnails(event_tx: EventSender) -> Result<(), Box<dyn Error>> {
-        let response = reqwest::get("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg").await?;
+    async fn fetch_thumbnails(event_tx: EventSender, url: String) -> Result<(), Box<dyn Error>> {
+        let response = reqwest::get(url).await?;
 
         let thumbnail = ImageReader::new(Cursor::new(response.bytes().await?.as_ref()))
             .with_guessed_format()?
