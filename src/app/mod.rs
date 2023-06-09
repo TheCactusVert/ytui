@@ -62,7 +62,7 @@ impl App {
             rt: Runtime::new().unwrap(),
             event_tx,
             input: String::default(),
-            search: Arc::new(Mutex::new(Search::default())),
+            search: SharedSearch::default(),
             searcher: None,
         }
     }
