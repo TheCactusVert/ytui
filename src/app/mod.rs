@@ -1,9 +1,11 @@
+mod player;
 mod search;
 mod ui;
 mod widgets;
 
 use crate::Event;
 use crate::EventSender;
+use player::Player;
 use search::Search;
 use ui::*;
 use widgets::Image;
@@ -11,7 +13,6 @@ use widgets::Image;
 use std::convert::AsRef;
 use std::io::Cursor;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
@@ -53,7 +54,7 @@ pub struct App {
     input: String,
     search: SharedSearch,
     searcher: Option<(CancellationToken, JoinHandle<()>)>,
-    player: Option<PathBuf>,
+    player: Player,
 }
 
 impl App {
@@ -66,7 +67,7 @@ impl App {
             input: String::default(),
             search: SharedSearch::default(),
             searcher: None,
-            player: which("celluloid").or_else(|_| which("mpv")).ok(), // TODO
+            player: Player::new(), // TODO
         }
     }
 
@@ -100,18 +101,12 @@ impl App {
                 self.state = State::Search;
             }
             KeyCode::Enter => {
-                if let Some(player) = &self.player {
-                    let search = self.search.lock().unwrap();
-                    match search.selected_item() {
-                        Some(Video { id, .. }) => {
-                            Command::new(player)
-                                .arg(format!("https://www.youtube.com/watch?v={id}"))
-                                .stderr(Stdio::null())
-                                .stdout(Stdio::null())
-                                .spawn();
-                        }
-                        _ => {}
+                let search = self.search.lock().unwrap();
+                match search.selected_item() {
+                    Some(Video { id, .. }) => {
+                        self.player.play_video(id);
                     }
+                    _ => {}
                 }
             }
             KeyCode::Char('k') | KeyCode::Up => {
