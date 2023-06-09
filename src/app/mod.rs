@@ -369,12 +369,7 @@ impl App {
 
     async fn run_search(event_tx: EventSender, token: CancellationToken, input: String) {
         select! {
-            _ = Self::fetch_search(event_tx.clone(), input) => {},
-            _ = token.cancelled() => return,
-        };
-
-        select! {
-            _ = Self::fetch_thumbnails(event_tx, String::from("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg")) => {},
+            _ = Self::fetch_search(event_tx, input) => {},
             _ = token.cancelled() => return,
         };
     }
@@ -384,21 +379,32 @@ impl App {
         let input = format!("q={input}");
         let items = client.search(Some(&input)).await?.items;
 
-        event_tx.send(Event::Fetch(items.into())).unwrap();
+        event_tx.send(Event::Fetch(items.clone().into())).unwrap();
+
+        for i in 0..items.len() {
+            let event_tx = event_tx.clone();
+            Self::fetch_thumbnail(event_tx, i, items[i].clone()).await?;
+        }
 
         Ok(())
     }
 
-    async fn fetch_thumbnails(event_tx: EventSender, url: String) -> Result<(), Box<dyn Error>> {
-        let response = reqwest::get(url).await?;
+    async fn fetch_thumbnail(event_tx: EventSender, i: usize, item: SearchItem) -> Result<(), Box<dyn Error>> {
+        let url = match item {
+            Video { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),
+            _ => None,   
+        };
+        
+        let response = match url {
+            Some(url) => reqwest::get(url).await?,
+            None => return Ok(()),
+        };
 
         let thumbnail = ImageReader::new(Cursor::new(response.bytes().await?.as_ref()))
             .with_guessed_format()?
             .decode()?;
 
-        /*search.set_thumbnail(0, thumbnail);
-
-        event_tx.send(Event::Fetch).unwrap();*/
+        event_tx.send(Event::Thumbnail(i, thumbnail)).unwrap();
 
         Ok(())
     }
