@@ -377,7 +377,7 @@ impl App {
         };
 
         let mut search = search.lock().unwrap();
-        *search = Search::from_items(items);
+        *search = Search::from_items(items.items);
 
         event_tx.send(Event::Fetch).unwrap();
     }
