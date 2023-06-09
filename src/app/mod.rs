@@ -409,10 +409,8 @@ impl App {
         let response = reqwest::get("https://img.youtube.com/vi/qbkSe4pq_C8/0.jpg").await?;
 
         let thumbnail = ImageReader::new(Cursor::new(response.bytes().await?.as_ref()))
-            .with_guessed_format()
-            .unwrap()
-            .decode()
-            .unwrap();
+            .with_guessed_format()?
+            .decode()?;
 
         let mut search = search.lock().unwrap();
         search.set_thumbnail(0, thumbnail);
