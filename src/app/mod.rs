@@ -13,8 +13,6 @@ use widgets::Image;
 use std::convert::AsRef;
 use std::error::Error;
 use std::io::Cursor;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use image::io::Reader as ImageReader;
@@ -28,7 +26,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::Line,
-    widgets::{Block, Borders, List, Paragraph, Widget, Wrap},
+    widgets::{Block, Borders, List, Paragraph, Wrap},
     Frame,
 };
 use tokio::runtime::Runtime;
@@ -36,7 +34,6 @@ use tokio::select;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use unicode_width::UnicodeWidthStr;
-use which::which;
 
 #[derive(PartialEq, Default, Debug)]
 enum State {
@@ -184,10 +181,7 @@ impl App {
         );
         f.render_widget(search_paragraph, chunks_a[0]);
         if self.state == State::Search {
-            f.set_cursor(
-                chunks_a[0].x + self.input.width() as u16 + 1,
-                chunks_a[0].y + 1,
-            );
+            f.set_cursor(chunks_a[0].x + self.input.width() as u16 + 1, chunks_a[0].y + 1);
         }
 
         let chunks_b = Layout::default()
@@ -209,18 +203,13 @@ impl App {
 
         match self.search.selected_item() {
             Some((Video { title, author, .. }, thumbnail)) => {
-                self.ui_video(f, chunks_b[1], &title, &author, thumbnail);
+                self.ui_video(f, chunks_b[1], title, author, thumbnail);
             }
             Some((Playlist { title, author, .. }, thumbnail)) => {
-                self.ui_playlist(f, chunks_b[1], &title, &author);
+                self.ui_playlist(f, chunks_b[1], title, author);
             }
-            Some((
-                Channel {
-                    name, description, ..
-                },
-                thumbnail,
-            )) => {
-                self.ui_channel(f, chunks_b[1], &name, &description, thumbnail);
+            Some((Channel { name, description, .. }, thumbnail)) => {
+                self.ui_channel(f, chunks_b[1], name, description, thumbnail);
             }
             _ => {
                 self.ui_empty(f, chunks_b[1]);
@@ -248,14 +237,7 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints(
-                [
-                    Constraint::Ratio(9, 16),
-                    Constraint::Min(1),
-                    Constraint::Min(1),
-                ]
-                .as_ref(),
-            )
+            .constraints([Constraint::Ratio(9, 16), Constraint::Min(1), Constraint::Min(1)].as_ref())
             .split(rect);
 
         match thumbnail {
@@ -316,14 +298,7 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints(
-                [
-                    Constraint::Length(16),
-                    Constraint::Min(1),
-                    Constraint::Min(1),
-                ]
-                .as_ref(),
-            )
+            .constraints([Constraint::Length(16), Constraint::Min(1), Constraint::Min(1)].as_ref())
             .split(rect);
 
         match thumbnail {
@@ -344,13 +319,11 @@ impl App {
     }
 
     fn ui_empty<B: Backend>(&self, f: &mut Frame<B>, rect: Rect) {
-        let help = Paragraph::new("Hello World!")
-            .alignment(Alignment::Center)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(self.get_border_style(State::Item)),
-            );
+        let help = Paragraph::new("Hello World!").alignment(Alignment::Center).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(self.get_border_style(State::Item)),
+        );
         f.render_widget(help, rect);
     }
 
@@ -358,11 +331,9 @@ impl App {
         assert!(self.searcher.is_none());
 
         let token = CancellationToken::new();
-        let join = self.rt.spawn(Self::run_search(
-            self.event_tx.clone(),
-            token.clone(),
-            input,
-        ));
+        let join = self
+            .rt
+            .spawn(Self::run_search(self.event_tx.clone(), token.clone(), input));
 
         self.searcher = Some((token, join));
     }
@@ -398,11 +369,7 @@ impl App {
         Ok(())
     }
 
-    async fn fetch_thumbnail(
-        event_tx: EventSender,
-        i: usize,
-        item: SearchItem,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn fetch_thumbnail(event_tx: EventSender, i: usize, item: SearchItem) -> Result<(), Box<dyn Error>> {
         let url = match item {
             Video { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),
             Channel { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),

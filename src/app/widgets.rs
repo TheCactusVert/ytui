@@ -22,9 +22,9 @@ impl<'a> Image<'a> {
 
 impl<'a> Widget for Image<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let img =
-            self.img
-                .resize_exact(area.width.into(), area.height.into(), FilterType::Triangle);
+        let img = self
+            .img
+            .resize_exact(area.width.into(), area.height.into(), FilterType::Triangle);
 
         assert!(area.width as u32 == img.width());
         assert!(area.height as u32 == img.height());
