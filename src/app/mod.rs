@@ -28,7 +28,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::Line,
-    widgets::{Block, Borders, List, Paragraph, Wrap},
+    widgets::{Block, Borders, List, Paragraph, Widget, Wrap},
     Frame,
 };
 use tokio::runtime::Runtime;
@@ -192,7 +192,7 @@ impl App {
 
         let chunks_b = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+            .constraints([Constraint::Percentage(35), Constraint::Percentage(65)].as_ref())
             .split(chunks_a[1]);
 
         let border = self.get_border_style(State::List);
@@ -220,7 +220,7 @@ impl App {
                 },
                 thumbnail,
             )) => {
-                self.ui_channel(f, chunks_b[1], &name, &description);
+                self.ui_channel(f, chunks_b[1], &name, &description, thumbnail);
             }
             _ => {
                 self.ui_empty(f, chunks_b[1]);
@@ -258,10 +258,13 @@ impl App {
             )
             .split(rect);
 
-        if let Some(thumbnail) = thumbnail {
-            let thumbnail = Image::new(&thumbnail);
-            f.render_widget(thumbnail, chunks[0]);
-        }
+        match thumbnail {
+            Some(thumbnail) => f.render_widget(Image::new(&thumbnail), chunks[0]),
+            None => f.render_widget(
+                Paragraph::new("Thumbnail loading...").alignment(Alignment::Center),
+                chunks[0],
+            ),
+        };
 
         let title = Paragraph::new(title).style(STYLE_TITLE);
         f.render_widget(title, chunks[1]);
@@ -293,7 +296,14 @@ impl App {
         f.render_widget(author, chunks[1]);
     }
 
-    fn ui_channel<B: Backend>(&self, f: &mut Frame<B>, rect: Rect, name: &str, description: &str) {
+    fn ui_channel<B: Backend>(
+        &self,
+        f: &mut Frame<B>,
+        rect: Rect,
+        name: &str,
+        description: &str,
+        thumbnail: &Option<DynamicImage>,
+    ) {
         let mut channel_title = Line::from("Channel");
         channel_title.patch_style(STYLE_TITLE);
 
@@ -316,14 +326,13 @@ impl App {
             )
             .split(rect);
 
-        // TODO should be thumbnail
-        let thumbnail = ImageReader::new(Cursor::new(include_bytes!("../../static/channel.jpg")))
-            .with_guessed_format()
-            .unwrap()
-            .decode()
-            .unwrap();
-        let thumbnail = Image::new(&thumbnail);
-        f.render_widget(thumbnail, chunks[0]);
+        match thumbnail {
+            Some(thumbnail) => f.render_widget(Image::new(&thumbnail), chunks[0]),
+            None => f.render_widget(
+                Paragraph::new("Thumbnail loading...").alignment(Alignment::Center),
+                chunks[0],
+            ),
+        };
 
         let name = Paragraph::new(name).style(STYLE_TITLE);
         f.render_widget(name, chunks[1]);
@@ -383,19 +392,23 @@ impl App {
 
         for i in 0..items.len() {
             let event_tx = event_tx.clone();
-            Self::fetch_thumbnail(event_tx, i, items[i].clone()).await?;
+            let _ = Self::fetch_thumbnail(event_tx, i, items[i].clone()).await;
         }
 
         Ok(())
     }
 
-    async fn fetch_thumbnail(event_tx: EventSender, i: usize, item: SearchItem) -> Result<(), Box<dyn Error>> {
+    async fn fetch_thumbnail(
+        event_tx: EventSender,
+        i: usize,
+        item: SearchItem,
+    ) -> Result<(), Box<dyn Error>> {
         let url = match item {
             Video { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),
             Channel { thumbnails, .. } => thumbnails.first().and_then(|t| Some(t.url.clone())),
-            _ => None,   
+            _ => None,
         };
-        
+
         let response = match url {
             Some(url) => reqwest::get(url).await?,
             None => return Ok(()),
